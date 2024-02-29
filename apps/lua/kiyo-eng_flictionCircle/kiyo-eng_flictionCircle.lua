@@ -1,11 +1,12 @@
 local settings = ac.storage {
   isactive = true,
-  debug= true,
+  -- debug= true,
   offsetX =0,
-  offsetY =0
+  offsetY =0,
+  scale = 2,
+  thick = 3
 }
 
-local isactive = refbool(settings.isactive)
 local t0
 local t1
 local t2
@@ -33,16 +34,17 @@ end
 
 function script.setui(wheel,offsetx,offsety)
   local offset = vec2(offsetx,offsety)
-  local radius_x = script.scale(wheel.load*wheel.dy,0.02)
-  local radius_y = script.scale(wheel.load*wheel.dx,0.02)
-  local fliction_x = script.scale(wheel.fy,0.02)
-  local fliction_y = script.scale(wheel.fx,0.02)
+  local scale = settings.scale * 0.01
+  local radius_x = script.scale(wheel.load*wheel.dy,scale)
+  local radius_y = script.scale(wheel.load*wheel.dx,scale)
+  local fliction_x = script.scale(-(wheel.fy),scale)
+  local fliction_y = script.scale(wheel.fx,scale)
   local ndslip = wheel.ndSlip
   local color_circle = rgbm(wheel.ndSlip,1.5-wheel.ndSlip,0.5,1)
   local color_fliction = rgbm(0,1,1,1)
   local color_slip = rgbm(1,0.5,0,1)
   local segment = 40
-  local thick = 3
+  local thick = settings.thick
   
   --摩擦円の描画
   script.drawEllipse(offset,vec2(radius_x,radius_y),rgbm(0,0,0,0.1),segment,thick+10)
@@ -54,7 +56,7 @@ function script.setui(wheel,offsetx,offsety)
   ui.drawCircleFilled(vec2(offset.x+fliction_x,offset.y+fliction_y),thick+2,color_fliction,segment)
 
   --どんだけ滑ってるか
-  ui.drawCircleFilled(offset,thick,color_slip,thick)
+  ui.drawCircleFilled(offset,thick,color_slip,segment)
   ui.drawLine(offset,vec2((offset.x+(fliction_x*ndslip)),(offset.y+(fliction_y*ndslip))),color_slip,thick*2)
   ui.drawCircleFilled( vec2((offset.x+(fliction_x*ndslip)),offset.y+(fliction_y*ndslip)),thick+2,color_slip,segment)
 end
@@ -71,23 +73,23 @@ function script.setdebug(num,wheels)
 end
 
 function script.ty0()
-  script.setui(t0,200,150)
-  script.setdebug('t0',t0)
+  script.setui(t0,ui.availableSpaceX()/2,ui.availableSpaceY()/2)
+  --script.setdebug('t0',t0)
 end
 
 function script.ty1()
-  script.setui(t1,200,150)
-  script.setdebug('t1',t1)
+  script.setui(t1,ui.availableSpaceX()/2,ui.availableSpaceY()/2)
+  --script.setdebug('t1',t1)
 end
 
 function script.ty2()
-  script.setui(t2,200,150)
-  script.setdebug('t2',t2)
+  script.setui(t2,ui.availableSpaceX()/2,ui.availableSpaceY()/2)
+  --script.setdebug('t2',t2)
 end
 
 function script.ty3()
-  script.setui(t3,200,150)
-  script.setdebug('t3',t3)
+  script.setui(t3,ui.availableSpaceX()/2,ui.availableSpaceY()/2)
+  --script.setdebug('t3',t3)
 end
 
 function script.windowMain()
@@ -100,15 +102,20 @@ function script.windowMain()
   local value,changed = ui.slider('##offsety', settings.offsetY, -(windowSize.y/4), windowSize.y/4, 'OFFSETY: %.0f')
   if changed then settings.offsetY = value end
 
-  if ui.checkbox('debug',settings.debug) then
-    settings.isactive = not settings.isactive
-  end
+  local value,changed = ui.slider('##scale', settings.scale, 1, 5, 'SCALE: %.02f')
+  if changed then settings.scale = value end
+
+  local value,changed = ui.slider('##thick', settings.thick, 1, 10, 'THICKNESS: %.02f')
+  if changed then settings.thick = value end
+
+  -- if ui.checkbox('debug',settings.debug) then
+  --   settings.debug = not settings.debug
+  -- end
 end
 
 function script.simUpdate()
   script.getState()
-  ac.debug('acceleration',car.acceleration:length())
-  
+  --ac.debug('acceleration',car.acceleration:length())
   uisize = ac.getUI().windowSize
   local uix = uisize.x/4
   local uiy = uisize.y/4
