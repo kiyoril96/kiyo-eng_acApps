@@ -35,10 +35,20 @@ end
 function script.setui(wheel,offsetx,offsety)
   local offset = vec2(offsetx,offsety)
   local scale = settings.scale * 0.01
-  local radius_x = script.scale(wheel.load*wheel.dy,scale)
-  local radius_y = script.scale(wheel.load*wheel.dx,scale)
-  local fliction_x = script.scale(-(wheel.fy),scale)
-  local fliction_y = script.scale(wheel.fx,scale)
+  local DX = wheel.dx
+  local DY = wheel.dy
+  local FX = wheel.fx
+  local FY = wheel.fy
+  if ac.isInReplayMode() then 
+    DX = 1
+    DY = 1
+    FX = 0
+    FY = 0
+  end 
+  local radius_x = script.scale(wheel.load*DY,scale)
+  local radius_y = script.scale(wheel.load*DX,scale)
+  local fliction_x = script.scale(-(FY),scale)
+  local fliction_y = script.scale(FX,scale)
   local ndslip = wheel.ndSlip
   local color_circle = rgbm(wheel.ndSlip,1.5-wheel.ndSlip,0.5,1)
   local color_fliction = rgbm(0,1,1,1)
