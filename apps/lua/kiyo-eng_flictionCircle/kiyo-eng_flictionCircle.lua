@@ -12,15 +12,16 @@ local t1
 local t2
 local t3
 local car
+local forcus 
 local uisize
 
-
 function script.getState()
-  car = ac.getCar(0)
-  t0 = ac.getCar(0).wheels[0]
-  t1 = ac.getCar(0).wheels[1]
-  t2 = ac.getCar(0).wheels[2]
-  t3 = ac.getCar(0).wheels[3]
+  forcus = ac.getSim().focusedCar
+  car = ac.getCar(forcus)
+  t0 = car.wheels[0]
+  t1 = car.wheels[1]
+  t2 = car.wheels[2]
+  t3 = car.wheels[3]
 end
 
 function script.drawEllipse(center, radius, color, numSegments, thickness)
@@ -129,7 +130,6 @@ function script.simUpdate()
   uisize = ac.getUI().windowSize
   local uix = uisize.x/4
   local uiy = uisize.y/4
-
   if settings.isactive then
     ui.transparentWindow('Fliction_circle', vec2(0.0), uisize, function ()
       script.setui(t0,uix*1+settings.offsetX,uiy*1+settings.offsetY)
