@@ -1,45 +1,34 @@
 -- Access OBS helper library:
 local obs = require('shared/utils/obs')
 
-local shot1
-local shot2
-local texture = obs.register(
-  'OBS Texture App',
-  'spectator view',
-  obs.Flags.ManualUpdate + obs.Flags.ApplyCMAA + obs.Flags.UserSize,
-  nil,
-  function (canvas,size)
+local sshot1
+local sshot2
+local scam = obs.register(
+  'kiyo-eng_OBSTexture'
+  ,'SpectatorView'
+  ,obs.Flags.ManualUpdate + obs.Flags.ApplyCMAA + obs.Flags.UserSize
+  ,function(size)
+    if sshot1 then sshot1:dispose() end
+    if sshot2 then sshot2:dispose() end
     local node = ac.findNodes('sceneRoot:yes')
-    if shot1 then shot1:dispose() end
-    if shot2 then shot2:dispose() end
-    shot1 = ac.GeometryShot(node, size, 1, false, render.AntialiasingMode.None,render.TextureFlags.Shared)
-    shot2 = ac.GeometryShot(node, size, 1, false, render.AntialiasingMode.None,render.TextureFlags.Shared)
-    shot1:setShadersType(render.ShadersType.Main)
-    shot1:setParticles(true)
-    shot1:setTransparentPass(true)
-    shot1:setSky(true)
-    shot1:setMaxLayer(5)
-    shot1:setOriginalLighting(true)
-
-    shot1:updateWithTrackCamera(0)
-
-    shot2:setShadersType(render.ShadersType.SimplifiedWithLights)
-    shot2:setParticles(true)
-    shot2:setTransparentPass(true)
-    shot2:setSky(true)
-    shot2:setMaxLayer(5)
-    shot2:setOriginalLighting(true)
-
-    shot2:updateWithTrackCamera(0)
-
+    sshot1 = ac.GeometryShot(node, size,  1, true, 104, 26,0)
+    sshot2 = ac.GeometryShot(node, size,  1, true, 104, 26,0)
+    sshot1:setClippingPlanes(0.5, 5e3)
+    sshot2:setClippingPlanes(0.5, 5e3)
+    sshot1:setBestSceneShotQuality()
+    sshot2:setBestSceneShotQuality()
+    sshot2:setShadersType(render.ShadersType.SimplifiedWithLights)
+  end ,function (canvas)
+    sshot1:updateWithTrackCamera(0)
+    sshot2:updateWithTrackCamera(0)
     canvas:updateWithShader({
-      textures = { tx1 = shot1 ,tx2 = shot2},
+      textures = { tx1 = sshot1 ,tx2 = sshot2},
       shader = [[
-        float4 main(PS_IN I){
-          float4 r1 = tx1.Sample(samLinear,I.Tex);
-          float4 r2 = tx2.Sample(samLinear,I.Tex);
-          float4 ret = (r1*0.7) + (r2*0.3);
-          ret = ret / (1+ret);
+        float4 main(PS_IN pin){
+          float4 r1 = tx1.Sample(samLinear,pin.Tex);
+          float4 r2 = tx2.Sample(samLinear,pin.Tex);
+          float4 ret = (r1*0.7) + (r2*0.5);
+          ret = 2 * ret / (1+ret);
         return float4(ret.rgb,1);
       }]]
     })
@@ -47,34 +36,37 @@ local texture = obs.register(
 )
 
 local cshot
+local cshot2
 local pos
 local dir
 local up 
 local fov
 local ccam = obs.register(
-  'OBS Texture App',
-  'ccam',
-  obs.Flags.ManualUpdate + obs.Flags.ApplyCMAA + obs.Flags.UserSize,
-  nil,
-  function (canvas,size)
-    local node = ac.findNodes('sceneRoot:yes')
+  'kiyo-eng_OBSTexture'
+  ,'ChaserCamera' 
+  ,obs.Flags.ManualUpdate + obs.Flags.ApplyCMAA + obs.Flags.UserSize
+  ,function (size)
     if cshot then cshot:dispose() end
-    cshot = ac.GeometryShot(node, size, 1, false, render.AntialiasingMode.None,render.TextureFlags.Shared)
-    cshot:setShadersType(render.ShadersType.Main)
-    cshot:setParticles(true)
-    cshot:setTransparentPass(true)
-    cshot:setSky(true)
-    cshot:setMaxLayer(5)
-    cshot:setOriginalLighting(true)
+    if cshot2 then cshot2:dispose() end
+    local node = ac.findNodes('sceneRoot:yes')
+    cshot = ac.GeometryShot(node, size, 1, true, 104, 26,0)
+    cshot2 = ac.GeometryShot(node, size, 1, true, 104, 26,0)
+    cshot:setClippingPlanes(0.5, 5e3)
+    cshot2:setClippingPlanes(0.5, 5e3)
+    cshot:setBestSceneShotQuality()
+    cshot2:setBestSceneShotQuality()
+    cshot2:setShadersType(render.ShadersType.SimplifiedWithLights)
+  end, function (canvas)
     cshot:update(pos,dir,up,fov)
-
+    cshot2:update(pos,dir,up,fov)
     canvas:updateWithShader({
-      textures = { tx1 = cshot},
+      textures = { tx1 = cshot,tx2 =cshot2},
       shader = [[
-        float4 main(PS_IN I){
-          float4 r1 = tx1.Sample(samLinear,I.Tex);
-          float4 ret = r1;
-          ret = ret / (1+ret);
+        float4 main(PS_IN pin){
+          float4 r1 = tx1.Sample(samLinear,pin.Tex);
+          float4 r2 = tx2.Sample(samLinear,pin.Tex);
+          float4 ret = (r1*0.7) + (r2*0.5);
+          ret = 2 * ret / (1+ret);
         return float4(ret.rgb,1);
       }]]
     })
@@ -134,13 +126,14 @@ function camera()
   dir = cameraLook
   up = (carUp + vec3(0,3,0)):normalize()
 
-  ac.forceVisibleHeadNodes(0, true)
+
 
   return {pos = pos , direction = dir , up = up  , fov = fov }
 end
 
 function script.simUpdate()
-  texture:update()
+  ac.forceVisibleHeadNodes(0, true)
+  scam:update()
   car= ac.getCar()
   simstate = ac.getSim()
   local params = camera()
@@ -149,9 +142,4 @@ function script.simUpdate()
   up = params.up
   fov = params.fov
   ccam:update()
-end
-
-function update(dt)
-  ac.debug('aa' , simstate.cameraPosition)
-  
 end
