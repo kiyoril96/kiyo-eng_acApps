@@ -73,26 +73,43 @@ local ccam = obs.register(
   end
 )
 
+
 local car 
 local simstate
-function camera()
+function camera(dt)
+
   local pos
   local dir
   local up 
-  local fov = 70
+  local fov = 60
   local carVelocity = smoothing(vec3(), 40)
   local lastCarPos = vec3()
   local lookDirection = smoothing(0, 10)
-  local t1,t2,t3,t4 = car.wheels[0],car.wheels[1],car.wheels[2],car.wheels[3]
-  local centpos = (t1.position+ t2.position+ t3.position+ t4.position)/4 
-  local carPos = centpos --car.position
-  local whlooks = ((t1.look+ t2.look+ t3.look+ t4.look )/4):normalize()
-  local carDir = car.look
+  local cameraParameters = {
+    height = 2.3
+    , pitch = 7
+    , distance = 4 
+  }
+  local distance = cameraParameters.distance + 1.6
+  local height = cameraParameters.height - 0.3
+  local pitchAngle = cameraParameters.pitch - 5
+
+  local carPos = car.position
+  local tmpcarDir = vec3(car.velocity.x,car.velocity.y,car.velocity.z)
+  local carDir = tmpcarDir:normalize()
   local carUp = car.up
   local carRight = math.cross(carDir, carUp):normalize()
-  local distance = 4
-  local height =1
-  local pitchAngle = -22
+
+  --local t1,t2,t3,t4 = car.wheels[0],car.wheels[1],car.wheels[2],car.wheels[3]
+  --local centpos = (t1.position+ t2.position+ t3.position+ t4.position)/4 
+  --local carPos = centpos --car.position
+  --local whlooks = ((t1.look+ t2.look+ t3.look+ t4.look )/4):normalize()
+  --local carDir = car.look
+  --local carUp = car.up
+  --local carRight = math.cross(carDir, carUp):normalize()
+  --local distance = 4
+  --local height =1
+  --local pitchAngle = -22
 
   --if calculateVelocityHere then
     -- Altenative approach, using coordinates and time delta
@@ -119,24 +136,27 @@ function camera()
   cameraAngle = cameraAngle + lookDirection.val * math.pi
   local sinAngle = math.sin(cameraAngle)
   local cosAngle = math.cos(cameraAngle)
+
   pos = (vec3(carPos.x ,carPos.y ,carPos.z )) + (carRight * sinAngle - carDir * cosAngle) * distance + vec3(0,height,0)
+  
   local cameraLookPosOffset = carDir + carUp * (1-math.abs(lookDirection.val))
   local cameraLook = (carPos + cameraLookPosOffset - pos ):normalize()
+
   cameraLook:rotate(quat.fromAngleAxis(math.radians(pitchAngle), carRight))
   dir = cameraLook
   up = (carUp + vec3(0,3,0)):normalize()
 
-
-
   return {pos = pos , direction = dir , up = up  , fov = fov }
 end
 
-function script.simUpdate()
+
+function script.simUpdate(dt)
+  smoothing.setDT(dt)
   ac.forceVisibleHeadNodes(0, true)
   scam:update()
   car= ac.getCar()
   simstate = ac.getSim()
-  local params = camera()
+  local params = camera(dt)
   pos = params.pos 
   dir = params.direction
   up = params.up
