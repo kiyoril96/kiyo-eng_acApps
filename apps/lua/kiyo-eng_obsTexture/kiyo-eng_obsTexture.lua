@@ -28,7 +28,7 @@ local scam = obs.register(
           float4 r1 = tx1.Sample(samLinear,pin.Tex);
           float4 r2 = tx2.Sample(samLinear,pin.Tex);
           float4 ret = (r1*0.7) + (r2*0.5);
-          ret = 2 * ret / (1+ret);
+          ret = 1.8 * ret / (1+ret);
         return float4(ret.rgb,1);
       }]]
     })
@@ -66,53 +66,40 @@ local ccam = obs.register(
           float4 r1 = tx1.Sample(samLinear,pin.Tex);
           float4 r2 = tx2.Sample(samLinear,pin.Tex);
           float4 ret = (r1*0.7) + (r2*0.5);
-          ret = 2 * ret / (1+ret);
+          ret = 1.8 * ret / (1+ret);
         return float4(ret.rgb,1);
       }]]
     })
   end
 )
 
+local carVelocity = smoothing(vec3(), 40)
+local lastCarPos = vec3()
+local lookDirection = smoothing(0, 10)
+
+local cameraParameters = ac.storage{
+  height = 1.7
+  , pitch = 0
+  , distance = 5 
+  , fov =60
+}
 
 local car 
-local simstate
 function camera(dt)
 
   local pos
   local dir
   local up 
-  local fov = 60
-  local carVelocity = smoothing(vec3(), 40)
-  local lastCarPos = vec3()
-  local lookDirection = smoothing(0, 10)
-  local cameraParameters = {
-    height = 2.3
-    , pitch = 7
-    , distance = 4 
-  }
-  local distance = cameraParameters.distance + 1.6
-  local height = cameraParameters.height - 0.3
-  local pitchAngle = cameraParameters.pitch - 5
 
-  local carPos = car.position
-  local tmpcarDir = vec3(car.velocity.x,car.velocity.y,car.velocity.z)
-  local carDir = tmpcarDir:normalize()
+  local distance = cameraParameters.distance
+  local height = cameraParameters.height
+  local pitchAngle = cameraParameters.pitch
+
+  local carPos = (car.wheels[0].contactPoint + car.wheels[1].contactPoint+car.wheels[2].contactPoint + car.wheels[3].contactPoint)/4
+  local carDir = car.look
   local carUp = car.up
   local carRight = math.cross(carDir, carUp):normalize()
 
-  --local t1,t2,t3,t4 = car.wheels[0],car.wheels[1],car.wheels[2],car.wheels[3]
-  --local centpos = (t1.position+ t2.position+ t3.position+ t4.position)/4 
-  --local carPos = centpos --car.position
-  --local whlooks = ((t1.look+ t2.look+ t3.look+ t4.look )/4):normalize()
-  --local carDir = car.look
-  --local carUp = car.up
-  --local carRight = math.cross(carDir, carUp):normalize()
-  --local distance = 4
-  --local height =1
-  --local pitchAngle = -22
-
-  --if calculateVelocityHere then
-    -- Altenative approach, using coordinates and time delta
   if lastCarPos ~= carPos then
     if lastCarPos ~= vec3() then
       local delta = lastCarPos - carPos
@@ -122,40 +109,39 @@ function camera(dt)
     end
     lastCarPos = carPos
   end
-  --else
-  --  -- Update smoothing thing with velocity:
-  --  -- Note: method `updateIfNew` would change value only if parameter is different from the one used last 
-  --  -- time. This way, in replays camera will freeze.
-  --  carVelocity:updateIfNew(ac.getCarVelocity())
-  --end
 
   local carVelocityDir = math.normalize(carVelocity.val + carDir * 0.01)
   local velocityX = math.clamp(math.dot(carRight, carVelocityDir) * math.pow(#carVelocity.val, 0.5) / 10, -1, 1)
   local cameraAngle = -velocityX * math.radians(54)
-  --lookDirection:update(math.sign(lookDirection.val))
   cameraAngle = cameraAngle + lookDirection.val * math.pi
   local sinAngle = math.sin(cameraAngle)
   local cosAngle = math.cos(cameraAngle)
-
   pos = (vec3(carPos.x ,carPos.y ,carPos.z )) + (carRight * sinAngle - carDir * cosAngle) * distance + vec3(0,height,0)
-  
   local cameraLookPosOffset = carDir + carUp * (1-math.abs(lookDirection.val))
   local cameraLook = (carPos + cameraLookPosOffset - pos ):normalize()
-
   cameraLook:rotate(quat.fromAngleAxis(math.radians(pitchAngle), carRight))
   dir = cameraLook
   up = (carUp + vec3(0,3,0)):normalize()
-
-  return {pos = pos , direction = dir , up = up  , fov = fov }
+  return {pos = pos , direction = dir , up = up  , fov = cameraParameters.fov }
 end
 
+
+function script.windowMain()
+  local value,changed = ui.slider('##distance', cameraParameters.distance, 3, 10, 'DISTANCE: %.02f')
+  if changed then cameraParameters.distance = value end
+  local value,changed = ui.slider('##height', cameraParameters.height, 0, 5 , 'HEIGHT: %.02f')
+  if changed then cameraParameters.height = value end
+  local value,changed = ui.slider('##pitch', cameraParameters.pitch, -10, 10, 'PITCH: %.02f')
+  if changed then cameraParameters.pitch = value end
+  local value,changed = ui.slider('##fov', cameraParameters.fov, 10, 100, 'FOV: %.02f')
+  if changed then cameraParameters.fov = value end
+end
 
 function script.simUpdate(dt)
   smoothing.setDT(dt)
   ac.forceVisibleHeadNodes(0, true)
   scam:update()
   car= ac.getCar()
-  simstate = ac.getSim()
   local params = camera(dt)
   pos = params.pos 
   dir = params.direction
