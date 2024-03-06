@@ -10,6 +10,9 @@
 #### kiyo-eng_flictionCircle
 * Forzaのテレメトリにあるアレをまねした奴です。
 * Forzaの矢印って逆じゃない…？
+#### kiyo-eng_obsTexture
+* OBS統合機能に追加のテクスチャを実装する奴です。
+* CSPのアップデートで要らない子になる可能性は高いです。
 
 ### TODO
 * 各ドキュメント整理する。
