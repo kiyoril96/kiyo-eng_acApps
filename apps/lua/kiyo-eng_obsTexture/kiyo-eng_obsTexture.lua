@@ -1,8 +1,17 @@
 -- Access OBS helper library:
 local obs = require('shared/utils/obs')
+local sim
+local car 
+local cameraParameters = ac.storage{
+  height = 1.7
+  , pitch = 0
+  , distance = 5 
+  , fov =60
+}
 
 local sshot1
 local sshot2
+local tcam
 local scam = obs.register(
   'kiyo-eng_OBSTexture'
   ,'SpectatorView'
@@ -76,15 +85,6 @@ local ccam = obs.register(
 local carVelocity = smoothing(vec3(), 40)
 local lastCarPos = vec3()
 local lookDirection = smoothing(0, 10)
-
-local cameraParameters = ac.storage{
-  height = 1.7
-  , pitch = 0
-  , distance = 5 
-  , fov =60
-}
-
-local car 
 function camera(dt)
 
   local pos
@@ -127,6 +127,7 @@ end
 
 
 function script.windowMain()
+  ui.text('Chaser Camera Setting')
   local value,changed = ui.slider('##distance', cameraParameters.distance, 3, 10, 'DISTANCE: %.02f')
   if changed then cameraParameters.distance = value end
   local value,changed = ui.slider('##height', cameraParameters.height, 0, 5 , 'HEIGHT: %.02f')
@@ -141,7 +142,7 @@ function script.simUpdate(dt)
   smoothing.setDT(dt)
   ac.forceVisibleHeadNodes(0, true)
   scam:update()
-  car= ac.getCar()
+  car = ac.getCar()
   local params = camera(dt)
   pos = params.pos 
   dir = params.direction
