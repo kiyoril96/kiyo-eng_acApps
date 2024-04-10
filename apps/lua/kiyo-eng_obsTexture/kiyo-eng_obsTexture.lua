@@ -7,6 +7,7 @@ local cameraParameters = ac.storage{
   , pitch = 0
   , distance = 5 
   , fov =60
+  , fps = 30
 }
 
 local sshot1
@@ -20,15 +21,18 @@ local scam = obs.register(
     if sshot1 then sshot1:dispose() end
     if sshot2 then sshot2:dispose() end
     local node = ac.findNodes('sceneRoot:yes')
-    sshot1 = ac.GeometryShot(node, size,  1, true, 104, 26,0)
-    sshot2 = ac.GeometryShot(node, size,  1, true, 104, 26,0)
-    sshot1:setClippingPlanes(0.5, 5e3)
-    sshot2:setClippingPlanes(0.5, 5e3)
+    sshot1 = ac.GeometryShot(node, size,  1, true, render.AntialiasingMode.YEBIS, render.TextureFormat.R16G16B16A16.Float, render.TextureFlags.Shared)
+    sshot2 = ac.GeometryShot(node, size,  1, true, render.AntialiasingMode.YEBIS, render.TextureFormat.R16G16B16A16.Float, render.TextureFlags.Shared)
+    sshot1:setClippingPlanes(0.01, 5e3)
+    sshot2:setClippingPlanes(0.01, 5e3)
     sshot1:setBestSceneShotQuality()
     sshot2:setBestSceneShotQuality()
+    
+    sshot1:setShadersType(render.ShadersType.Main)
     sshot2:setShadersType(render.ShadersType.SimplifiedWithLights)
   end ,function (canvas)
     sshot1:updateWithTrackCamera(0)
+    --canvas:copyFrom(sshot1)
     sshot2:updateWithTrackCamera(0)
     canvas:updateWithShader({
       textures = { tx1 = sshot1 ,tx2 = sshot2},
@@ -36,8 +40,7 @@ local scam = obs.register(
         float4 main(PS_IN pin){
           float4 r1 = tx1.Sample(samLinear,pin.Tex);
           float4 r2 = tx2.Sample(samLinear,pin.Tex);
-          float4 ret = (r1*0.7) + (r2*0.5);
-          ret = 1.8 * ret / (1+ret);
+          float4 ret = (r1*0.7) + (r2*0.3);
         return float4(ret.rgb,1);
       }]]
     })
@@ -58,10 +61,10 @@ local ccam = obs.register(
     if cshot then cshot:dispose() end
     if cshot2 then cshot2:dispose() end
     local node = ac.findNodes('sceneRoot:yes')
-    cshot = ac.GeometryShot(node, size, 1, true, 104, 26,0)
-    cshot2 = ac.GeometryShot(node, size, 1, true, 104, 26,0)
-    cshot:setClippingPlanes(0.5, 5e3)
-    cshot2:setClippingPlanes(0.5, 5e3)
+    cshot = ac.GeometryShot(node, size, 1, true, render.AntialiasingMode.YEBIS, render.TextureFormat.R16G16B16A16.Float, render.TextureFlags.Shared)
+    cshot2 = ac.GeometryShot(node, size, 1, true, render.AntialiasingMode.YEBIS, render.TextureFormat.R16G16B16A16.Float, render.TextureFlags.Shared)
+    cshot:setClippingPlanes(0.01, 5e3)
+    cshot2:setClippingPlanes(0.01, 5e3)
     cshot:setBestSceneShotQuality()
     cshot2:setBestSceneShotQuality()
     cshot2:setShadersType(render.ShadersType.SimplifiedWithLights)
@@ -74,8 +77,7 @@ local ccam = obs.register(
         float4 main(PS_IN pin){
           float4 r1 = tx1.Sample(samLinear,pin.Tex);
           float4 r2 = tx2.Sample(samLinear,pin.Tex);
-          float4 ret = (r1*0.7) + (r2*0.5);
-          ret = 1.8 * ret / (1+ret);
+          float4 ret = (r1*0.7) + (r2*0.3);
         return float4(ret.rgb,1);
       }]]
     })
@@ -126,7 +128,11 @@ function camera(dt)
 end
 
 
+
 function script.windowMain()
+  ui.text('UPDATE RATE')
+  local value,changed = ui.slider('##UPDATERATE', cameraParameters.fps, 24, 120, 'FPS: %.0f')
+  if changed then cameraParameters.fps = value end
   ui.text('Chaser Camera Setting')
   local value,changed = ui.slider('##distance', cameraParameters.distance, 3, 10, 'DISTANCE: %.02f')
   if changed then cameraParameters.distance = value end
@@ -138,15 +144,23 @@ function script.windowMain()
   if changed then cameraParameters.fov = value end
 end
 
+local updatelate
+local deltaTime = 0
 function script.simUpdate(dt)
-  smoothing.setDT(dt)
-  ac.forceVisibleHeadNodes(0, true)
-  scam:update()
-  car = ac.getCar()
-  local params = camera(dt)
-  pos = params.pos 
-  dir = params.direction
-  up = params.up
-  fov = params.fov
-  ccam:update()
+
+  deltaTime = deltaTime+dt
+  updatelate = 1 / cameraParameters.fps
+  if deltaTime >= (updatelate) then 
+    ac.forceVisibleHeadNodes(0, true) 
+    smoothing.setDT(deltaTime)
+    scam:update()
+    car = ac.getCar(ac.getSim().focusedCar)
+    local params = camera(deltaTime)
+    pos = params.pos 
+    dir = params.direction
+    up = params.up
+    fov = params.fov
+    ccam:update()
+    deltaTime = 0
+  end 
 end
