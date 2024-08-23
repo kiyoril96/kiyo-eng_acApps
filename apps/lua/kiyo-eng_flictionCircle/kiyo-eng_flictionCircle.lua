@@ -1,6 +1,5 @@
 local settings = ac.storage {
   isactive = true,
-  -- debug= true,
   offsetX =0,
   offsetY =0,
   scale = 2,
@@ -14,6 +13,7 @@ local t3
 local car
 local forcus 
 local uisize
+-- local datastore = {}
 
 function script.getState()
   forcus = ac.getSim().focusedCar
@@ -22,6 +22,7 @@ function script.getState()
   t1 = car.wheels[1]
   t2 = car.wheels[2]
   t3 = car.wheels[3]
+  -- datastore[ac.getSim().replayFrames] = {t0,t1,t2,t3} 
 end
 
 function script.drawEllipse(center, radius, color, numSegments, thickness)
@@ -36,18 +37,20 @@ end
 function script.setui(wheel,offsetx,offsety)
   local offset = vec2(offsetx,offsety)
   local scale = settings.scale * 0.01
+  local load = wheel.load
   local DX = wheel.dx
   local DY = wheel.dy
   local FX = wheel.fx
   local FY = wheel.fy
   if ac.isInReplayMode() then 
+    load = wheel.load
     DX = 1
     DY = 1
     FX = 0
     FY = 0
-  end 
-  local radius_x = script.scale(wheel.load*DY,scale)
-  local radius_y = script.scale(wheel.load*DX,scale)
+  end
+  local radius_x = script.scale(load*DY,scale)
+  local radius_y = script.scale(load*DX,scale)
   local fliction_x = script.scale(-(FY),scale)
   local fliction_y = script.scale(FX,scale)
   local ndslip = wheel.ndSlip
@@ -72,35 +75,20 @@ function script.setui(wheel,offsetx,offsety)
   ui.drawCircleFilled( vec2((offset.x+(fliction_x*ndslip)),offset.y+(fliction_y*ndslip)),thick+2,color_slip,segment)
 end
 
-function script.setdebug(num,wheels)
-  if settings.debug then
-    ac.debug(num..'_load',wheels.load)
-    ac.debug(num..'_dx',wheels.dx)
-    ac.debug(num..'_dy',wheels.dy)
-    ac.debug(num..'_fx',wheels.fx)
-    ac.debug(num..'_fy',wheels.fy)
-    ac.debug(num..'_ndSlip',wheels.ndSlip)
-  end
-end
-
 function script.ty0()
   script.setui(t0,ui.availableSpaceX()/2,ui.availableSpaceY()/2)
-  --script.setdebug('t0',t0)
 end
 
 function script.ty1()
   script.setui(t1,ui.availableSpaceX()/2,ui.availableSpaceY()/2)
-  --script.setdebug('t1',t1)
 end
 
 function script.ty2()
   script.setui(t2,ui.availableSpaceX()/2,ui.availableSpaceY()/2)
-  --script.setdebug('t2',t2)
 end
 
 function script.ty3()
   script.setui(t3,ui.availableSpaceX()/2,ui.availableSpaceY()/2)
-  --script.setdebug('t3',t3)
 end
 
 function script.windowMain()
@@ -118,15 +106,10 @@ function script.windowMain()
 
   local value,changed = ui.slider('##thick', settings.thick, 1, 10, 'THICKNESS: %.02f')
   if changed then settings.thick = value end
-
-  -- if ui.checkbox('debug',settings.debug) then
-  --   settings.debug = not settings.debug
-  -- end
 end
 
 function script.simUpdate()
   script.getState()
-  --ac.debug('acceleration',car.acceleration:length())
   uisize = ac.getUI().windowSize
   local uix = uisize.x/4
   local uiy = uisize.y/4
@@ -137,5 +120,12 @@ function script.simUpdate()
       script.setui(t2,uix*1+settings.offsetX,uiy*3-settings.offsetY)
       script.setui(t3,uix*3-settings.offsetX,uiy*3-settings.offsetY)
     end)
+  end
+
+  ac.debug('curFrame' , ac.getSim().frame)
+  ac.debug('replayFrame' , ac.getSim().replayCurrentFrame)
+  ac.debug('replayFrames' , ac.getSim().replayFrames)
+  if ac.getSim().isReplayActive then
+    ac.debug('equalsReplay',ac.getSim().frame == ac.getSim().replayCurrentFrame )
   end
 end
