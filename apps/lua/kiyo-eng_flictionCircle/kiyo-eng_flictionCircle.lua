@@ -5,7 +5,7 @@ local settings = ac.storage {
   scale = 2,
   thick = 3
 }
-
+local obs = require('shared/utils/obs')
 local t0
 local t1
 local t2
@@ -13,6 +13,16 @@ local t3
 local car
 local forcus 
 local uisize
+local isinit = false
+local uix
+local uiy
+function script.init()
+  uisize = ac.getUI().windowSize
+  uix = uisize.x/4
+  uiy = uisize.y/4
+  isinit = true
+end
+
 -- local datastore = {}
 
 function script.getState()
@@ -108,11 +118,21 @@ function script.windowMain()
   if changed then settings.thick = value end
 end
 
+obs.register('kiyo-eng_OBSTexture', 'FlictionCircle', obs.Flags.Transparent,
+vec2(1920,1080)
+, function (canvas)
+  canvas:clear()
+  canvas:update(function() 
+    script.setui(t0,uix*1+settings.offsetX,uiy*1+settings.offsetY)
+    script.setui(t1,uix*3-settings.offsetX,uiy*1+settings.offsetY)
+    script.setui(t2,uix*1+settings.offsetX,uiy*3-settings.offsetY)
+    script.setui(t3,uix*3-settings.offsetX,uiy*3-settings.offsetY)
+  end)
+end)
+
 function script.simUpdate()
+  if isinit == false then script.init() end
   script.getState()
-  uisize = ac.getUI().windowSize
-  local uix = uisize.x/4
-  local uiy = uisize.y/4
   if settings.isactive then
     ui.transparentWindow('Fliction_circle', vec2(0.0), uisize, function ()
       script.setui(t0,uix*1+settings.offsetX,uiy*1+settings.offsetY)

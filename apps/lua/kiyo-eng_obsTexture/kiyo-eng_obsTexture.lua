@@ -8,6 +8,7 @@ local cameraParameters = ac.storage{
   , ccamactive = true
   , scamactive = true
   , fcamactive = true
+  , dashcamactive =true
   , vrlook = true
   , fheight = 0
   , height = 1.7
@@ -15,6 +16,16 @@ local cameraParameters = ac.storage{
   , distance = 5 
   , fov =60
   , fps = 30
+  , dashheight = 0
+  , dashpitch = 0
+  , dashdistance = 0
+  , dashfov = 60
+  , dashfps = 0
+  , dashx = 0
+  , dashy = 0
+  , dashz = 0
+  , dashroll =0
+  , dashyaw =0
 }
 
 local node = ac.findNodes('sceneRoot:yes')
@@ -117,6 +128,35 @@ local fcam = obs.register(
   end
 )
 
+local dashcam
+local dpos
+local ddir
+local dup
+local dfov
+local dcam = obs.register(
+  'kiyo-eng_OBSTexture'
+  ,'DashbordCamera' 
+  ,obs.Flags.ManualUpdate + obs.Flags.ApplyCMAA + obs.Flags.UserSize
+  ,function (size)
+    if dashcam then dashcam:dispose() end
+    dashcam = ac.GeometryShot(node, size, 1, true, render.AntialiasingMode.YEBIS, render.TextureFormat.R16G16B16A16.Float, render.TextureFlags.Shared)
+    dashcam:setClippingPlanes(0.01, 5e3)
+    dashcam:setBestSceneShotQuality()
+    end, function (canvas)
+    dashcam:update(dpos,ddir,dup,dfov)
+    canvas:updateWithShader({
+      textures = { tx1 = dashcam},
+      shader = [[
+        float4 main(PS_IN pin){
+          float4 r1 = tx1.Sample(samLinear,pin.Tex);
+          float4 ret = r1;
+        return float4(ret.rgb,1);
+      }]]
+    })
+  end
+)
+
+
 local carVelocity = smoothing(vec3(), 40)
 local lastCarPos = vec3()
 local lookDirection = smoothing(0, 10)
@@ -203,6 +243,23 @@ function script.windowMain()
     ui.text('First Person Camera Setting')
     local value,changed = ui.slider('##fheight', cameraParameters.fheight, -1, 1 , 'FIRST_HEIGHT: %.02f')
     if changed then cameraParameters.fheight = value end
+
+    ui.text('Dash Camera Setting')
+    local value,changed = ui.slider('##dashx', cameraParameters.dashx, -5, 5, 'X: %.02f')
+    if changed then cameraParameters.dashx = value end
+    local value,changed = ui.slider('##dashy', cameraParameters.dashy, -5, 5, 'Y: %.02f')
+    if changed then cameraParameters.dashy = value end
+    local value,changed = ui.slider('##dashz', cameraParameters.dashz, -5, 5, 'Z: %.02f')
+    if changed then cameraParameters.dashz = value end
+    
+    local value,changed = ui.slider('##dashpitch', cameraParameters.dashpitch, -90, 90, 'PITCH: %.02f')
+    if changed then cameraParameters.dashpitch = value end
+    local value,changed = ui.slider('##dashroll', cameraParameters.dashroll, -90, 90, 'ROLL: %.02f')
+    if changed then cameraParameters.dashroll = value end
+    local value,changed = ui.slider('##dashyaw', cameraParameters.dashyaw, -90, 90, 'YAW: %.02f')
+    if changed then cameraParameters.dashyaw = value end
+    local value,changed = ui.slider('##dashfov', cameraParameters.fov, 10, 100, 'FOV: %.02f')
+    if changed then cameraParameters.dashfov = value end
   end
 end
 
@@ -246,9 +303,28 @@ function script.simUpdate(dt)
         fup =  sim.cameraUp
         ffov = sim.cameraFOV
       end
-      fcam:update()
     end
 
+    local carpos = ac.getCar().position
+    local carlook = ac.getCar().look
+    local carside = ac.getCar().side
+    local carangle = ac.getCar().localVelocity
+
+    dpos = vec3((carpos.x - cameraParameters.dashz * carlook.x - cameraParameters.dashx * carlook.z),(carpos.y + cameraParameters.dashy),(carpos.z - cameraParameters.dashz * carlook.z + cameraParameters.dashx * carlook.x))
+    ddir = vec3(carlook.x,math.sin(cameraParameters.dashpitch/180*math.pi),carlook.z )
+    if carlook.x > 0 then
+      ddir.x = math.sin(math.acos(ddir.z) - cameraParameters.dashyaw/180*math.pi)
+      ddir.z = math.cos(math.acos(ddir.z) - cameraParameters.dashyaw/180*math.pi)        
+    else
+      ddir.x = math.sin(-math.acos(ddir.z) - cameraParameters.dashyaw/180*math.pi)
+      ddir.z = math.cos(-math.acos(ddir.z ) - cameraParameters.dashyaw/180*math.pi)        
+    end
+    dup = vec3((carside.x * math.sin(cameraParameters.dashroll/180*math.pi)),(math.cos(cameraParameters.dashroll/180*math.pi)),(carside.z * math.sin(cameraParameters.dashroll/180*math.pi)))
+    dfov = cameraParameters.dashfov
+    fcam:update()
+    dcam:update()
+
+    ac.debug('angle' , vec3(carangle.x/math.pi,carangle.y/math.pi,carangle.z/math.pi))
     deltaTime = 0
   end 
 end
