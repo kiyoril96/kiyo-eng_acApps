@@ -1,5 +1,5 @@
 *
-!/apps/*
-!/apps/lua/*
-!/apps/Kua/kiyo-eng*
-!.gitignore
+!/apps/
+!/apps/lua/
+!/apps/lua/kiyo-eng*/
+!/apps/lua/kiyo-eng*/*
