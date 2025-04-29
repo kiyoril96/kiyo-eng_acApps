@@ -118,15 +118,19 @@ function script.windowMain()
   if changed then settings.thick = value end
 end
 
-obs.register('kiyo-eng_OBSTexture', 'FlictionCircle', obs.Flags.Transparent,
-vec2(1920,1080)
-, function (canvas)
+
+local shot 
+obs.register('kiyo-eng_OBSTexture', 'FlictionCircle', obs.Flags.Transparent+obs.Flags.UserSize,
+nil
+, function (canvas,size)
   canvas:clear()
+  
+  
   canvas:update(function() 
-    script.setui(t0,uix*1+settings.offsetX,uiy*1+settings.offsetY)
-    script.setui(t1,uix*3-settings.offsetX,uiy*1+settings.offsetY)
-    script.setui(t2,uix*1+settings.offsetX,uiy*3-settings.offsetY)
-    script.setui(t3,uix*3-settings.offsetX,uiy*3-settings.offsetY)
+    script.setui(t0,(size.x/4)*1+settings.offsetX,(size.y/4)*1+settings.offsetY)
+    script.setui(t1,(size.x/4)*3-settings.offsetX,(size.y/4)*1+settings.offsetY)
+    script.setui(t2,(size.x/4)*1+settings.offsetX,(size.y/4)*3-settings.offsetY)
+    script.setui(t3,(size.x/4)*3-settings.offsetX,(size.y/4)*3-settings.offsetY)
   end)
 end)
 
