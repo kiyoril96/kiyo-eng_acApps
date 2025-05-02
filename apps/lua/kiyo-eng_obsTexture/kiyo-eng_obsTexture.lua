@@ -29,43 +29,31 @@ local cameraParameters = ac.storage{
 }
 
 local node = ac.findNodes('sceneRoot:yes')
-local sshot1
-local sshot2
+
+local sshot
 local scam = obs.register(
   'kiyo-eng_OBSTexture'
   ,'SpectatorView'
   ,obs.Flags.ManualUpdate + obs.Flags.ApplyCMAA + obs.Flags.UserSize
   ,function(size)
-    if sshot1 then sshot1:dispose() end
-    if sshot2 then sshot2:dispose() end
-    sshot1 = ac.GeometryShot(node, size,  1, true, render.AntialiasingMode.YEBIS, render.TextureFormat.R16G16B16A16.Float, render.TextureFlags.Shared)
-    sshot2 = ac.GeometryShot(node, size,  1, true, render.AntialiasingMode.YEBIS, render.TextureFormat.R16G16B16A16.Float, render.TextureFlags.Shared)
-    sshot1:setClippingPlanes(0.01, 5e3)
-    sshot2:setClippingPlanes(0.01, 5e3)
-    sshot1:setBestSceneShotQuality()
-    sshot2:setBestSceneShotQuality()
-    
-    sshot1:setShadersType(render.ShadersType.Main)
-    sshot2:setShadersType(render.ShadersType.SimplifiedWithLights)
+    if sshot then sshot:dispose() end
+    sshot = ac.GeometryShot(node, size,  1, true, render.AntialiasingMode.YEBIS, render.TextureFormat.R16G16B16A16.Float, render.TextureFlags.Shared)
+    sshot:setClippingPlanes(0.01, 5e3)
+    sshot:setBestSceneShotQuality()
   end ,function (canvas)
-    sshot1:updateWithTrackCamera(0)
-    --canvas:copyFrom(sshot1)
-    sshot2:updateWithTrackCamera(0)
+    sshot:updateWithTrackCamera(0)
     canvas:updateWithShader({
-      textures = { tx1 = sshot1 ,tx2 = sshot2},
+      textures = { tx1 = sshot},
       shader = [[
-        float4 main(PS_IN pin){
-          float4 r1 = tx1.Sample(samLinear,pin.Tex);
-          float4 r2 = tx2.Sample(samLinear,pin.Tex);
-          float4 ret = (r1*0.7) + (r2*0.3);
-        return float4(ret.rgb,1);
-      }]]
+      float4 main(PS_IN pin){
+        float4 ret = tx1.Sample(samLinear,pin.Tex);
+      return float4(ret.rgb,1);
+    }]]
     })
   end
 )
 
 local cshot
-local cshot2
 local pos
 local dir
 local up 
@@ -76,26 +64,18 @@ local ccam = obs.register(
   ,obs.Flags.ManualUpdate + obs.Flags.ApplyCMAA + obs.Flags.UserSize
   ,function (size)
     if cshot then cshot:dispose() end
-    if cshot2 then cshot2:dispose() end
     cshot = ac.GeometryShot(node, size, 1, true, render.AntialiasingMode.YEBIS, render.TextureFormat.R16G16B16A16.Float, render.TextureFlags.Shared)
-    cshot2 = ac.GeometryShot(node, size, 1, true, render.AntialiasingMode.YEBIS, render.TextureFormat.R16G16B16A16.Float, render.TextureFlags.Shared)
     cshot:setClippingPlanes(0.01, 5e3)
-    cshot2:setClippingPlanes(0.01, 5e3)
     cshot:setBestSceneShotQuality()
-    cshot2:setBestSceneShotQuality()
-    cshot2:setShadersType(render.ShadersType.SimplifiedWithLights)
   end, function (canvas)
     cshot:update(pos,dir,up,fov)
-    cshot2:update(pos,dir,up,fov)
     canvas:updateWithShader({
-      textures = { tx1 = cshot,tx2 =cshot2},
+      textures = { tx1 = cshot},
       shader = [[
-        float4 main(PS_IN pin){
-          float4 r1 = tx1.Sample(samLinear,pin.Tex);
-          float4 r2 = tx2.Sample(samLinear,pin.Tex);
-          float4 ret = (r1*0.7) + (r2*0.3);
-        return float4(ret.rgb,1);
-      }]]
+      float4 main(PS_IN pin){
+        float4 ret = tx1.Sample(samLinear,pin.Tex);
+      return float4(ret.rgb,1);
+    }]]
     })
   end
 )
@@ -119,11 +99,10 @@ local fcam = obs.register(
     canvas:updateWithShader({
       textures = { tx1 = firstshot},
       shader = [[
-        float4 main(PS_IN pin){
-          float4 r1 = tx1.Sample(samLinear,pin.Tex);
-          float4 ret = r1;
-        return float4(ret.rgb,1);
-      }]]
+      float4 main(PS_IN pin){
+        float4 ret = tx1.Sample(samLinear,pin.Tex);
+      return float4(ret.rgb,1);
+    }]]
     })
   end
 )
@@ -147,15 +126,13 @@ local dcam = obs.register(
     canvas:updateWithShader({
       textures = { tx1 = dashcam},
       shader = [[
-        float4 main(PS_IN pin){
-          float4 r1 = tx1.Sample(samLinear,pin.Tex);
-          float4 ret = r1;
-        return float4(ret.rgb,1);
-      }]]
+      float4 main(PS_IN pin){
+        float4 ret = tx1.Sample(samLinear,pin.Tex);
+      return float4(ret.rgb,1);
+    }]]
     })
   end
 )
-
 
 local carVelocity = smoothing(vec3(), 40)
 local lastCarPos = vec3()
@@ -200,14 +177,11 @@ function camera(dt)
   return {pos = pos , direction = dir , up = up  , fov = cameraParameters.fov }
 end
 
-
-
 function script.windowMain()
   if ui.checkbox('Activate',cameraParameters.isactive) then
     cameraParameters.isactive = not cameraParameters.isactive
   end 
 
-  
   if cameraParameters.isactive then
     ui.text('UPDATE RATE')
     local value,changed = ui.slider('##UPDATERATE', cameraParameters.fps, 24, 120, 'FPS: %.0f')
