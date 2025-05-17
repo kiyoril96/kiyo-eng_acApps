@@ -8,6 +8,7 @@ local wiperMax = -1
 local minspeed = 5
 local brake_hold = 0
 local handbrake_hold = 0
+local hndbrake_hold_button = ac.ControlButton("__EXT_HANDBRAKE_HOLD")
 
 local settings = ac.storage {
     isactive = true
@@ -151,6 +152,10 @@ function script.windowMain()
     if ui.checkbox('Hold Mode',settings.isactive) then
         settings.isactive = not settings.isactive
     end
+
+    ui.sameLine()
+    hndbrake_hold_button:control(vec2(161,0))
+
     local value,changed = ui.slider('##WipersMaxSpeed', wiperMax , 2, ac.getCar().wiperModes,'Wiper Min speed :  %.0f')
     if changed then wiperMax = value end
 
