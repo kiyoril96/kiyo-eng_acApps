@@ -119,18 +119,20 @@ function script.windowMain()
 end
 
 
-local shot 
+local shot
+local resolution_retio
 obs.register('kiyo-eng_OBSTexture', 'FlictionCircle', obs.Flags.Transparent+obs.Flags.UserSize,
 nil
 , function (canvas,size)
   canvas:clear()
-  
+  resolution_retio = vec2(size.x/uisize.x,size.y/uisize.y)
+  local offset = vec2(settings.offsetX*resolution_retio.x,settings.offsetY*resolution_retio.y)
   
   canvas:update(function() 
-    script.setui(t0,(size.x/4)*1+settings.offsetX,(size.y/4)*1+settings.offsetY)
-    script.setui(t1,(size.x/4)*3-settings.offsetX,(size.y/4)*1+settings.offsetY)
-    script.setui(t2,(size.x/4)*1+settings.offsetX,(size.y/4)*3-settings.offsetY)
-    script.setui(t3,(size.x/4)*3-settings.offsetX,(size.y/4)*3-settings.offsetY)
+    script.setui(t0,(size.x/4)*1+offset.x,(size.y/4)*1+offset.y)
+    script.setui(t1,(size.x/4)*3-offset.x,(size.y/4)*1+offset.y)
+    script.setui(t2,(size.x/4)*1+offset.x,(size.y/4)*3-offset.y)
+    script.setui(t3,(size.x/4)*3-offset.x,(size.y/4)*3-offset.y)
   end)
 end)
 
