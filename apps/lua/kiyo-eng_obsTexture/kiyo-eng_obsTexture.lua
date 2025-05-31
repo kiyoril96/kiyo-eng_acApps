@@ -30,28 +30,28 @@ local cameraParameters = ac.storage{
 
 local node = ac.findNodes('sceneRoot:yes')
 
-local sshot
-local scam = obs.register(
-  'kiyo-eng_OBSTexture'
-  ,'SpectatorView'
-  ,obs.Flags.UserSize
-  ,function(size)
-    if sshot then sshot:dispose() end
-    sshot = ac.GeometryShot(node, size,  1, true, render.AntialiasingMode.YEBIS, render.TextureFormat.R16G16B16A16.Float, render.TextureFlags.Shared)
-    sshot:setClippingPlanes(0.01, 5e3)
-    sshot:setBestSceneShotQuality()
-  end ,function (canvas)
-    sshot:updateWithTrackCamera(0)
-    canvas:updateWithShader({
-      textures = { tx1 = sshot},
-      shader = [[
-      float4 main(PS_IN pin){
-        float4 ret = tx1.Sample(samLinear,pin.Tex);
-      return float4(ret.rgb,1);
-    }]]
-    })
-  end
-)
+--local sshot
+--local scam = obs.register(
+--  'kiyo-eng_OBSTexture'
+--  ,'SpectatorView'
+--  ,obs.Flags.UserSize
+--  ,function(size)
+--    if sshot then sshot:dispose() end
+--    sshot = ac.GeometryShot(node, size,  1, true, render.AntialiasingMode.YEBIS, render.TextureFormat.R16G16B16A16.Float, render.TextureFlags.Shared)
+--    sshot:setClippingPlanes(0.01, 5e3)
+--    sshot:setBestSceneShotQuality()
+--  end ,function (canvas)
+--    sshot:updateWithTrackCamera(0)
+--    canvas:updateWithShader({
+--      textures = { tx1 = sshot},
+--      shader = [[
+--      float4 main(PS_IN pin){
+--        float4 ret = tx1.Sample(samLinear,pin.Tex);
+--      return float4(ret.rgb,1);
+--    }]]
+--    })
+--  end
+--)
 
 local cshot
 local pos
@@ -282,7 +282,7 @@ function script.simUpdate(dt)
     local carpos = ac.getCar().position
     local carlook = ac.getCar().look
     local carside = ac.getCar().side
-    local carangle = ac.getCar().localVelocity
+    --local carangle = ac.getCar().localVelocity
 
     dpos = vec3((carpos.x - cameraParameters.dashz * carlook.x - cameraParameters.dashx * carlook.z),(carpos.y + cameraParameters.dashy),(carpos.z - cameraParameters.dashz * carlook.z + cameraParameters.dashx * carlook.x))
     ddir = vec3(carlook.x,math.sin(cameraParameters.dashpitch/180*math.pi),carlook.z )

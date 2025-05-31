@@ -9,6 +9,7 @@ local minspeed = 5
 local brake_hold = 0
 local handbrake_hold = 0
 local hndbrake_hold_button = ac.ControlButton("__EXT_HANDBRAKE_HOLD")
+local daytime_light_button = ac.ControlButton("__EXT_DAYTIME_LIGHT")
 
 local settings = ac.storage {
     isactive = true
@@ -152,9 +153,12 @@ function script.windowMain()
     if ui.checkbox('Hold Mode',settings.isactive) then
         settings.isactive = not settings.isactive
     end
-
+    ui.text('HB Hold Button  :')
     ui.sameLine()
     hndbrake_hold_button:control(vec2(161,0))
+    ui.text('DayLight Button :')
+    ui.sameLine()
+    daytime_light_button:control(vec2(161,0))
 
     local value,changed = ui.slider('##WipersMaxSpeed', wiperMax , 2, ac.getCar().wiperModes,'Wiper Min speed :  %.0f')
     if changed then wiperMax = value end
