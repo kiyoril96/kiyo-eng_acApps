@@ -34,7 +34,7 @@ local sshot
 local scam = obs.register(
   'kiyo-eng_OBSTexture'
   ,'SpectatorView'
-  ,obs.Flags.ManualUpdate + obs.Flags.ApplyCMAA + obs.Flags.UserSize
+  ,obs.Flags.UserSize
   ,function(size)
     if sshot then sshot:dispose() end
     sshot = ac.GeometryShot(node, size,  1, true, render.AntialiasingMode.YEBIS, render.TextureFormat.R16G16B16A16.Float, render.TextureFlags.Shared)
@@ -61,7 +61,7 @@ local fov
 local ccam = obs.register(
   'kiyo-eng_OBSTexture'
   ,'ChaserCamera' 
-  ,obs.Flags.ManualUpdate + obs.Flags.ApplyCMAA + obs.Flags.UserSize
+  ,obs.Flags.UserSize
   ,function (size)
     if cshot then cshot:dispose() end
     cshot = ac.GeometryShot(node, size, 1, true, render.AntialiasingMode.YEBIS, render.TextureFormat.R16G16B16A16.Float, render.TextureFlags.Shared)
@@ -88,7 +88,7 @@ local ffov
 local fcam = obs.register(
   'kiyo-eng_OBSTexture'
   ,'FirstPersonCamera' 
-  ,obs.Flags.ManualUpdate + obs.Flags.ApplyCMAA + obs.Flags.UserSize
+  ,obs.Flags.UserSize
   ,function (size)
     if firstshot then firstshot:dispose() end
     firstshot = ac.GeometryShot(node, size, 1, true, render.AntialiasingMode.YEBIS, render.TextureFormat.R16G16B16A16.Float, render.TextureFlags.Shared)
@@ -115,7 +115,7 @@ local dfov
 local dcam = obs.register(
   'kiyo-eng_OBSTexture'
   ,'DashbordCamera' 
-  ,obs.Flags.ManualUpdate + obs.Flags.ApplyCMAA + obs.Flags.UserSize
+  ,obs.Flags.UserSize
   ,function (size)
     if dashcam then dashcam:dispose() end
     dashcam = ac.GeometryShot(node, size, 1, true, render.AntialiasingMode.YEBIS, render.TextureFormat.R16G16B16A16.Float, render.TextureFlags.Shared)
@@ -241,8 +241,8 @@ local updatelate
 local deltaTime = 0
 function script.simUpdate(dt)
   deltaTime = deltaTime+dt
-  updatelate = 1 / cameraParameters.fps
-  if deltaTime >= (updatelate) and cameraParameters.isactive then 
+  --updatelate = 1 / cameraParameters.fps
+  --if deltaTime >= (updatelate) and cameraParameters.isactive then 
     
     if cameraParameters.scamactive or cameraParameters.ccamactive or cameraParameters.fcamactive then
       sim = ac.getSim()
@@ -252,9 +252,9 @@ function script.simUpdate(dt)
       smoothing.setDT(deltaTime)
     end
 
-    if cameraParameters.scamactive then
-      scam:update()
-    end
+    -- if cameraParameters.scamactive then
+    --   scam:update()
+    -- end
 
     if cameraParameters.ccamactive then
       local params = camera(deltaTime)
@@ -262,7 +262,7 @@ function script.simUpdate(dt)
       dir = params.direction
       up = params.up
       fov = params.fov
-      ccam:update()
+      --ccam:update()
     end
 
     if cameraParameters.fcamactive then
@@ -295,10 +295,10 @@ function script.simUpdate(dt)
     end
     dup = vec3((carside.x * math.sin(cameraParameters.dashroll/180*math.pi)),(math.cos(cameraParameters.dashroll/180*math.pi)),(carside.z * math.sin(cameraParameters.dashroll/180*math.pi)))
     dfov = cameraParameters.dashfov
-    fcam:update()
-    dcam:update()
+    --fcam:update()
+    --dcam:update()
 
-    ac.debug('angle' , vec3(carangle.x/math.pi,carangle.y/math.pi,carangle.z/math.pi))
+    --ac.debug('angle' , vec3(carangle.x/math.pi,carangle.y/math.pi,carangle.z/math.pi))
     deltaTime = 0
-  end 
+  --end 
 end
