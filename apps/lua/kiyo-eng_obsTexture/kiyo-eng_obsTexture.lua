@@ -183,9 +183,9 @@ function script.windowMain()
   end 
 
   if cameraParameters.isactive then
-    ui.text('UPDATE RATE')
-    local value,changed = ui.slider('##UPDATERATE', cameraParameters.fps, 24, 120, 'FPS: %.0f')
-    if changed then cameraParameters.fps = value end
+    -- ui.text('UPDATE RATE')
+    -- local value,changed = ui.slider('##UPDATERATE', cameraParameters.fps, 24, 120, 'FPS: %.0f')
+    -- if changed then cameraParameters.fps = value end
 
     if ui.checkbox('Chase Cam Activate',cameraParameters.ccamactive) then
       cameraParameters.ccamactive = not cameraParameters.ccamactive
