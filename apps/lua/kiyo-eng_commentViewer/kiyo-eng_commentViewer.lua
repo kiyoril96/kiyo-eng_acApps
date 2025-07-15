@@ -13,6 +13,8 @@ local data = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcv
 local error
 local status
 
+ac.setWindowBackground('main',rgbm(0,0,0,0.1) , false)
+
 function windowMain(dt)
     ui.pushDWriteFont()
 
