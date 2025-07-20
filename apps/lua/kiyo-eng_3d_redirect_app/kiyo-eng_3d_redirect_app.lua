@@ -1,12 +1,14 @@
 -- canvas の用意
-local canvas=ui.ExtraCanvas(vec2(1920,1080),1,render.AntialiasingMode.None,render.TextureFormat.R16G16B16A16.Float,render.TextureFlags.Shared)
+local canvas=ui.ExtraCanvas(vec2(800,800),1,render.AntialiasingMode.None,render.TextureFormat.R16G16B16A16.Float,render.TextureFlags.Shared)
+local canvas2=ui.ExtraCanvas(vec2(800,800),1,render.AntialiasingMode.None,render.TextureFormat.R16G16B16A16.Float,render.TextureFlags.Shared)
 canvas:setName('testTexture') -- 名前を付ければLua debugで見えるようになるらしい
+canvas2:setName('testView')
 ac.debug('windows',ac.getAppWindows() )
 
 local uioffsetx = 0.6
 local uioffsety = 0.2
 local uioffsetz = -0.25
-local uisize=0.4
+local uisize=0.1
 
 local pos
 local up
@@ -51,10 +53,10 @@ function draw3dui()
     up = vec3(up.x,up.y,up.z):rotate(quat.fromAngleAxis(math.radians(rotationy),side)):rotate(quat.fromAngleAxis(math.radians(rotationz),look))
 
     -- 4点の位置を決める（正方形）
-    p1 = (center+(side*uisize*(4/3))+(up*uisize*(3/4)))
-    p2 = (center+(side*-uisize*(4/3))+(up*uisize*(3/4)))
-    p3 = (center+(side*-uisize*(4/3))+(up*-uisize*(3/4)))
-    p4 = (center+(side*uisize*(4/3))+(up*-uisize*(3/4)))
+    p1 = (center+(side*uisize)+(up*uisize))
+    p2 = (center+(side*-uisize)+(up*uisize))
+    p3 = (center+(side*-uisize)+(up*-uisize))
+    p4 = (center+(side*uisize)+(up*-uisize))
 
     --3DUIの描画
     render.quad(p1,p2,p3,p4,rgbm(10,10,10,1),canvas)
@@ -108,12 +110,37 @@ end
 -- 通常のコールバックかSIM_CALLBACKSで呼ぶ
 function uiupdate()
     -- canvas に描く
-    canvas:clear()
-    ac.accessAppWindow('PEDALS'):setRedirectLayer(1,true)
-    ac.accessAppWindow('Sidekick'):setRedirectLayer(2,false)
-    canvas:copyFrom('dynamic::hud::redirected::2')
-    canvas:update(function(dt)
-        -- 前のフレームで書いたものが残っているので削除
-        end)
+    local windowSize = ac.getSim().windowSize
+    local accsesser =ac.accessAppWindow('Sidekick'):setRedirectLayer(2,true)
+    local appPos = accsesser:position()
+    local appSize = accsesser:size()
+    local appCenter = appPos+(vec2(appSize.x/2,appSize.y/2))
+
+    local uv1 = vec2( math.max(0,(appCenter-(vec2(400,400))).x/windowSize.x) , math.max(0,(appCenter - (vec2(400,400))).y /windowSize.y))
+    --local uv2 = vec2( 1,1)
+    -- local uv1 = vec2((appPos.x/windowSize.x),(appPos.y/windowSize.y))
+    -- local uv2 = vec2((800/windowSize.x),(800/windowSize.y))
     
+    
+    ac.debug('windowSize',windowSize)
+    ac.debug('appPos',appPos)
+    ac.debug('appSize',appSize)
+    ac.debug('appCenter',appCenter)
+    ac.debug('uv1',uv1)
+    ac.debug('uv2',uv2)
+
+    ui.drawCircle(appCenter,3,rgbm(1,0,0,1))
+    canvas:clear()
+    canvas:updateWithShader({
+            p1 = vec2(0,0),
+            p2 = windowSize,
+            uv1 = uv1,
+            --uv2 = uv2,
+            textures = {tx1 = 'dynamic::hud::redirected::2'},
+            shader = [[
+                float4 main(PS_IN pin){
+                    float4 ret = tx1.Sample(samLinear,pin.Tex);
+                    return float4(ret.rgba);
+                }]]
+    })
 end
