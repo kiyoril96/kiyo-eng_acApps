@@ -74,11 +74,11 @@ end
 
 function windowMain()
     -- 位置調整    
-    local value,changed = ui.slider('##uioffsetx', uioffsetx, -2, 2, 'OFFSETX: %.02f')
+    local value,changed = ui.slider('##uioffsetx', uioffsetx, -1, 1, 'OFFSETX: %.03f')
     if changed then uioffsetx = value end
-    local value,changed = ui.slider('##uioffsety', uioffsety, -2, 2, 'OFFSETY: %.02f')
+    local value,changed = ui.slider('##uioffsety', uioffsety, -1, 1, 'OFFSETY: %.03f')
     if changed then uioffsety = value end
-    local value,changed = ui.slider('##uioffsetz', uioffsetz, -2, 2, 'OFFSETZ: %.02f')
+    local value,changed = ui.slider('##uioffsetz', uioffsetz, -1, 1, 'OFFSETZ: %.03f')
     if changed then uioffsetz = value end
     local value,changed = ui.slider('##uisize', uisize, 0, 1, 'SIZE: %.02f')
     if changed then uisize = value end
@@ -92,10 +92,10 @@ function windowMain()
     if changed then rotationz = value end
 
     if ui.button('reset') then 
-        uioffsetx = 1.25
-        uioffsety = 0.8
-        uioffsetz = 1.2
-        uisize=0.25
+        uioffsetx = 0.6
+        uioffsety = 0.2
+        uioffsetz = -0.25
+        uisize=0.1
         rotationx = 0
         rotationy = 0
         rotationz = 0
