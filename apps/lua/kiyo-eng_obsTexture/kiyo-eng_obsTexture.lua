@@ -49,7 +49,7 @@ local node = ac.findNodes('sceneRoot:yes')
 --        float4 ret = tx1.Sample(samLinear,pin.Tex);
 --      return float4(ret.rgb,1);
 --    }]]
---    })
+--    }) 
 --  end
 --)
 
@@ -58,17 +58,21 @@ local pos
 local dir
 local up 
 local fov
+local sizestore =nil
 local ccam = obs.register(
   'kiyo-eng_OBSTexture'
   ,'ChaserCamera' 
   ,obs.Flags.UserSize
   ,function (size)
-    if cshot then cshot:dispose() end
-    cshot = ac.GeometryShot(node, size, 1, true, render.AntialiasingMode.YEBIS, render.TextureFormat.R16G16B16A16.Float)
-    cshot:setClippingPlanes(0.01, 5e3)
-    cshot:setBestSceneShotQuality()
+    if sizestore ==nil or sizestore ~= size then 
+      if cshot then cshot:dispose() end
+      cshot = ac.GeometryShot(node, size, 1, true, render.AntialiasingMode.YEBIS, render.TextureFormat.R16G16B16A16.Float)
+      cshot:setClippingPlanes(0.01, 5e3)
+      cshot:setBestSceneShotQuality()
+    end
   end, function (canvas)
     cshot:update(pos,dir,up,fov)
+    canvas:clear()
     canvas:updateWithShader({
       textures = { tx1 = cshot},
       shader = [[
