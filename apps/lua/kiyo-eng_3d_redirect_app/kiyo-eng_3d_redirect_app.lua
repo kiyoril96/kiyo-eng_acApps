@@ -1,8 +1,6 @@
 -- canvas の用意
-local canvas=ui.ExtraCanvas(vec2(800,800),1,render.AntialiasingMode.None,render.TextureFormat.R16G16B16A16.Float,render.TextureFlags.Shared)
-local canvas2=ui.ExtraCanvas(vec2(800,800),1,render.AntialiasingMode.None,render.TextureFormat.R16G16B16A16.Float,render.TextureFlags.Shared)
+local canvas=ui.ExtraCanvas(vec2(800,800),1,render.AntialiasingMode.None,render.TextureFormat.R8G8B8A8.SNorm,render.TextureFlags.None)
 canvas:setName('testTexture') -- 名前を付ければLua debugで見えるようになるらしい
-canvas2:setName('testView')
 ac.debug('windows',ac.getAppWindows() )
 
 local uioffsetx = 0.6
@@ -106,18 +104,76 @@ function windowMain()
         visible = not visible
     end
 end
+
+function genlabel(num)
+    local ret
+    if num == 0 then ret = 'OFF' else ret = num end
+    return ret
+end
+
+function nonblank(name1 ,name2) 
+    if name1 == "" then return name2 else return name1 end  end
+
+
+local layerList = {}
+local windowlist = {}
+function redirectConfig()
+    windowlist = ac.getAppWindows()
+    ui.columns(3)
+    ui.dwriteText('Windww')
+    ui.nextColumn()
+    ui.dwriteText('Redirect Layer')
+    ui.nextColumn()
+    ui.dwriteText('Duplicate')
+    ui.nextColumn()
+
+    for i = 1 ,#windowlist do
+        if windowlist[i].visible and windowlist[i].name ~= 'IMGUI_LUA_kiyo-eng_3d_redirect_app_config' and windowlist[i].name ~= nil then 
+            ui.dwriteText( nonblank( windowlist[i].title, windowlist[i].name )  ) 
+            ui.nextColumn()
+            ui.combo('##layerSelecter'..i,genlabel(windowlist[i].layer),function() 
+                -- 選択した数値のレイヤーへ転送する
+                for y=0 , #layerList + 1  do 
+                    if ui.selectable(genlabel(y)) then
+                        local curlaer = ac.accessAppWindow(windowlist[i].name):redirectLayer(refbool(false))
+                        if layerList[curlaer] ~= nil and layerList[curlaer].apps ~= nil then
+                            table.removeItem( layerList[curlaer].apps, windowlist[i].name )
+                        end
+                        local layer_in = layerList[y] or {layer = y , pos = vec2(1,1),size = vec2(1,1),obs = true ,apps={} }
+                        table.insert(layer_in.apps, windowlist[i].name)
+                        ac.accessAppWindow(windowlist[i].name):setRedirectLayer(y,windowlist[i].layerDuplicate)
+                        layerList[y] = layer_in
+
+                    end 
+                end
+                
+            end )
+            ui.nextColumn()
+            local dupStore = nil
+            if ui.checkbox('##layerDuplicateSwitcher'..i,windowlist[i].layerDuplicate) and not dupStore then
+                -- WindwoあくせさーのでゅぷりけーとをＯＮにする処理を呼ぶ
+                ac.accessAppWindow(windowlist[i].name):setRedirectLayer(windowlist[i].layer,not windowlist[i].layerDuplicate)
+                dupStore = windowlist[i].layerDuplicate
+            end
+            ui.nextColumn()
+            
+        end
+    end
+end 
+
+
 -- UIの処理
 -- 通常のコールバックかSIM_CALLBACKSで呼ぶ
 function uiupdate()
     -- canvas に描く
     local windowSize = ac.getSim().windowSize
-    local accsesser =ac.accessAppWindow('Sidekick'):setRedirectLayer(2,true)
-    local appPos = accsesser:position()
-    local appSize = accsesser:size()
-    local appCenter = appPos+(vec2(appSize.x/2,appSize.y/2))
+    --local accsesser =ac.accessAppWindow('Sidekick'):setRedirectLayer(2,false)
+    --local appPos = accsesser:position()
+    --local appSize = accsesser:size()
+    --local appCenter = appPos+(vec2(appSize.x/2,appSize.y/2))
 
-    local uv1 = vec2( math.max(0,(appCenter-(vec2(400,400))).x/windowSize.x) , math.max(0,(appCenter - (vec2(400,400))).y /windowSize.y))
-    --local uv2 = vec2( 1,1)
+    --local uv1 = vec2( (appCenter-(vec2(400,400))).x/windowSize.x , (appCenter - (vec2(400,400))).y /windowSize.y)
+    -- local uv2 = vec2( 1,1)
     -- local uv1 = vec2((appPos.x/windowSize.x),(appPos.y/windowSize.y))
     -- local uv2 = vec2((800/windowSize.x),(800/windowSize.y))
     
@@ -127,20 +183,24 @@ function uiupdate()
     ac.debug('appSize',appSize)
     ac.debug('appCenter',appCenter)
     ac.debug('uv1',uv1)
-    ac.debug('uv2',uv2)
 
-    ui.drawCircle(appCenter,3,rgbm(1,0,0,1))
-    canvas:clear()
-    canvas:updateWithShader({
-            p1 = vec2(0,0),
-            p2 = windowSize,
-            uv1 = uv1,
-            --uv2 = uv2,
-            textures = {tx1 = 'dynamic::hud::redirected::2'},
-            shader = [[
-                float4 main(PS_IN pin){
-                    float4 ret = tx1.Sample(samLinear,pin.Tex);
-                    return float4(ret.rgba);
-                }]]
-    })
+    ac.debug('layers',layerList)
+    ac.debug('curLayer',ac.accessAppWindow('CSPRSTATS'):redirectLayer(refbool(false)))
+  
+    
+    
+    --ui.drawCircle(appCenter,3,rgbm(1,0,0,1))
+    --canvas:clear()
+    --canvas:updateWithShader({
+    --        --p1 = vec2(0,0),
+    --        p2 = windowSize,
+    --        uv1 = uv1,
+    --        --uv2 = uv2,
+    --        textures = {tx1 = 'dynamic::hud::redirected::2'},
+    --        shader = [[
+    --            float4 main(PS_IN pin){
+    --                float4 ret = tx1.Sample(samLinear,pin.Tex);
+    --                return float4(ret.rgba);
+    --            }]]
+    --})
 end
