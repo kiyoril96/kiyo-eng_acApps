@@ -1,19 +1,15 @@
--- canvas の用意
-local canvas=ui.ExtraCanvas(vec2(800,800),1,render.AntialiasingMode.None,render.TextureFormat.R8G8B8A8.SNorm,render.TextureFlags.None)
-canvas:setName('testTexture') -- 名前を付ければLua debugで見えるようになるらしい
-ac.debug('windows',ac.getAppWindows() )
+local windowSize = ac.getSim().windowSize
 
-local uioffsetx = 0.6
-local uioffsety = 0.2
-local uioffsetz = -0.25
-local uisize=0.1
+--local uioffsetx = 0.6
+--local uioffsety = 0.2
+--local uioffsetz = -0.25
+--local uisize=0.1
 
 local pos
 local up
 local side
 local look
 
-local center
 local rotationx = 0
 local rotationy = 0
 local rotationz = 0
@@ -32,6 +28,10 @@ local colerP2 = rgbm(0,100,0,1) -- 青
 local colerP3 = rgbm(0,0,100,1) -- 緑
 local colerP4 = rgbm(100,100,100,1) -- 白
 
+-- アプリレイヤーの一覧
+local layerList = {}
+local windowlist = {}
+
 -- 空間にUI用のポリゴンを用意して描画する（位置決めとか）
 -- RENDER_CALLBACKS で呼ぶ
 function draw3dui()
@@ -41,68 +41,104 @@ function draw3dui()
     side = ac.getCar(0).side
     look = ac.getCar(0).look
 
-    -- UIの中心点を決める
-    center = pos+vec3(0,uioffsety,0)+(side*-uioffsetx)+(look*-uioffsetz)
+    for i = 1 , #layerList  do
+        if #layerList[i].apps~=0 then
+            -- ここでは表示だけやる
 
-    -- UIの向きを変える
-    -- lookの向きから変えないと後段の回転軸がよくわからなくなる
-    look = vec3(look.x,look.y,look.z):rotate(quat.fromAngleAxis(math.radians(rotationx),up)):rotate(quat.fromAngleAxis(math.radians(rotationy),side))
-    side = vec3(side.x,side.y,side.z):rotate(quat.fromAngleAxis(math.radians(rotationx),up)):rotate(quat.fromAngleAxis(math.radians(rotationz),look))
-    up = vec3(up.x,up.y,up.z):rotate(quat.fromAngleAxis(math.radians(rotationy),side)):rotate(quat.fromAngleAxis(math.radians(rotationz),look))
+            -- TODO ちゃんとつくる
+            local center = pos+vec3(0,layerList[i].uioffsety,0)+(side*-layerList[i].uioffsetx)+(look*-layerList[i].uioffsetz)
 
-    -- 4点の位置を決める（正方形）
-    p1 = (center+(side*uisize)+(up*uisize))
-    p2 = (center+(side*-uisize)+(up*uisize))
-    p3 = (center+(side*-uisize)+(up*-uisize))
-    p4 = (center+(side*uisize)+(up*-uisize))
+            -- UIの向きを変える
+            -- lookの向きから変えないと後段の回転軸がよくわからなくなる
+            local look = vec3(look.x,look.y,look.z):rotate(quat.fromAngleAxis(math.radians(layerList[i].rotationx),up)):rotate(quat.fromAngleAxis(math.radians(layerList[i].rotationy),side))
+            local side = vec3(side.x,side.y,side.z):rotate(quat.fromAngleAxis(math.radians(layerList[i].rotationx),up)):rotate(quat.fromAngleAxis(math.radians(layerList[i].rotationz),look))
+            local up = vec3(up.x,up.y,up.z):rotate(quat.fromAngleAxis(math.radians(layerList[i].rotationy),side)):rotate(quat.fromAngleAxis(math.radians(layerList[i].rotationz),look))
 
-    --3DUIの描画
-    render.quad(p1,p2,p3,p4,rgbm(10,10,10,1),canvas)
+            -- 4点の位置を決める（正方形）
+            local p1 = (center+(side*layerList[i].uisize * ((layerList[i].layerSize.x/2)/(layerList[i].layerSize.y/2)) )+(up*layerList[i].uisize *((layerList[i].layerSize.y/2)/(layerList[i].layerSize.x/2)) ))
+            local p2 = (center+(side*-layerList[i].uisize* ((layerList[i].layerSize.x/2)/(layerList[i].layerSize.y/2)) )+(up*layerList[i].uisize *((layerList[i].layerSize.y/2)/(layerList[i].layerSize.x/2)) ))
+            local p3 = (center+(side*-layerList[i].uisize* ((layerList[i].layerSize.x/2)/(layerList[i].layerSize.y/2)) )+(up*-layerList[i].uisize*((layerList[i].layerSize.y/2)/(layerList[i].layerSize.x/2)) ))
+            local p4 = (center+(side*layerList[i].uisize * ((layerList[i].layerSize.x/2)/(layerList[i].layerSize.y/2)) )+(up*-layerList[i].uisize*((layerList[i].layerSize.y/2)/(layerList[i].layerSize.x/2)) ))
+            -- TODO ここまで
 
-    -- 確認用
-    if visible then 
-        render.circle(center,look,pointSize,colerCenter,nil)
-        render.circle(p1,look,pointSize,colerP1,nil)
-        render.circle(p2,look,pointSize,colerP2,nil)
-        render.circle(p3,look,pointSize,colerP3,nil)
-        render.circle(p4,look,pointSize,colerP4,nil)
+            render.quad(p1,p2,p3,p4,rgbm(10,10,10,1),layerList[i].appCanvas)
+
+                -- 確認用
+            if layerList[i].visible then 
+                render.circle(center,look,pointSize,colerCenter,nil)
+                render.circle(p1,look,pointSize,colerP1,nil)
+                render.circle(p2,look,pointSize,colerP2,nil)
+                render.circle(p3,look,pointSize,colerP3,nil)
+                render.circle(p4,look,pointSize,colerP4,nil)
+            end
+        end
     end
-
 end
 
-function windowMain()
-    -- 位置調整    
-    local value,changed = ui.slider('##uioffsetx', uioffsetx, -1, 1, 'OFFSETX: %.03f')
-    if changed then uioffsetx = value end
-    local value,changed = ui.slider('##uioffsety', uioffsety, -1, 1, 'OFFSETY: %.03f')
-    if changed then uioffsety = value end
-    local value,changed = ui.slider('##uioffsetz', uioffsetz, -1, 1, 'OFFSETZ: %.03f')
-    if changed then uioffsetz = value end
-    local value,changed = ui.slider('##uisize', uisize, 0, 1, 'SIZE: %.02f')
-    if changed then uisize = value end
+-- アプリが転送されたレイヤーの表示位置等を調整するUI
+function layer3DController()
 
-    -- 回転
-    local value,changed = ui.slider('##rotationx', rotationx, -90, 90, 'ROTATIONX: %.0f')
-    if changed then rotationx = value end
-    local value,changed = ui.slider('##rotationy', rotationy, -90, 90, 'ROTATIONY: %.0f')
-    if changed then rotationy = value end
-    local value,changed = ui.slider('##rotationz', rotationz, -90, 90, 'ROTATIONZ: %.0f')
-    if changed then rotationz = value end
+    ui.columns(6)
+    ui.dwriteText('Layer')
+    ui.nextColumn()
+    ui.dwriteText('Position')
+    ui.nextColumn()
+    ui.dwriteText('Rotation')
+    ui.nextColumn()
+    ui.dwriteText('DebugPoint')
+    ui.nextColumn()
+    ui.dwriteText('Coler')
+    ui.nextColumn()
+    ui.dwriteText('OBS')
+    ui.nextColumn()
+    
+    for i=1,#layerList do
 
-    if ui.button('reset') then 
-        uioffsetx = 0.6
-        uioffsety = 0.2
-        uioffsetz = -0.25
-        uisize=0.1
-        rotationx = 0
-        rotationy = 0
-        rotationz = 0
-    end 
+        if #layerList[i].apps ~= 0 then 
 
-    -- 確認用のポイントを表示
-    if ui.checkbox('Debug Point',visible) then
-        visible = not visible
+            ui.dwriteText(i)
+            ui.nextColumn()
+
+            -- 位置調整
+            local value,changed = ui.slider('##uioffsetx'..i, layerList[i].uioffsetx, -1, 1, 'OFFSETX: %.03f')
+            if changed then layerList[i].uioffsetx = value end
+            local value,changed = ui.slider('##uioffsety'..i, layerList[i].uioffsety, -1, 1, 'OFFSETY: %.03f')
+            if changed then layerList[i].uioffsety = value end
+            local value,changed = ui.slider('##uioffsetz'..i, layerList[i].uioffsetz, -1, 1, 'OFFSETZ: %.03f')
+            if changed then layerList[i].uioffsetz = value end
+            local value,changed = ui.slider('##isize'..i, layerList[i].uisize, 0, 1, 'SIZE: %.02f')
+            if changed then layerList[i].uisize = value end
+            
+            ui.nextColumn()
+
+            -- 回転
+            local value,changed = ui.slider('##rotationx'..i, layerList[i].rotationx, -90, 90, 'ROTATIONX: %.0f')
+            if changed then layerList[i].rotationx = value end
+            local value,changed = ui.slider('##rotationy'..i, layerList[i].rotationy, -90, 90, 'ROTATIONY: %.0f')
+            if changed then layerList[i].rotationy = value end
+            local value,changed = ui.slider('##rotationz'..i, layerList[i].rotationz, -90, 90, 'ROTATIONZ: %.0f')
+            if changed then layerList[i].rotationz = value end
+
+            ui.nextColumn()
+
+            -- 確認用のポイントを表示
+            if ui.checkbox('Debug Point'..i, layerList[i].visible) then
+                layerList[i].visible = not  layerList[i].visible
+            end
+
+            ui.nextColumn()
+
+            -- coler
+
+            ui.nextColumn()
+
+            -- obs
+
+            ui.nextColumn()
+        end 
+
     end
+
 end
 
 function genlabel(num)
@@ -112,12 +148,11 @@ function genlabel(num)
 end
 
 function nonblank(name1 ,name2) 
-    if name1 == "" then return name2 else return name1 end  end
+    if name1 == "" then return name2 else return name1 end
+end
 
-
-local layerList = {}
-local windowlist = {}
-function redirectConfig()
+-- 3d表示、複製を制御するUI
+function redirectSelecter()
     windowlist = ac.getAppWindows()
     ui.columns(3)
     ui.dwriteText('Windww')
@@ -127,23 +162,39 @@ function redirectConfig()
     ui.dwriteText('Duplicate')
     ui.nextColumn()
 
+    -- For 入れ子はちょっとパフォーマンスに問題ありか…？
+    -- ↑ まあ表示してる間だけの処理だし...
     for i = 1 ,#windowlist do
-        if windowlist[i].visible and windowlist[i].name ~= 'IMGUI_LUA_kiyo-eng_3d_redirect_app_config' and windowlist[i].name ~= nil then 
+        -- 表示されていないアプリと自分自身を除く
+        if windowlist[i].visible and windowlist[i].name ~= 'IMGUI_LUA_kiyo-eng_3d_redirect_app_main' and windowlist[i].name ~= nil then 
             ui.dwriteText( nonblank( windowlist[i].title, windowlist[i].name )  ) 
             ui.nextColumn()
             ui.combo('##layerSelecter'..i,genlabel(windowlist[i].layer),function() 
                 -- 選択した数値のレイヤーへ転送する
                 for y=0 , #layerList + 1  do 
                     if ui.selectable(genlabel(y)) then
-                        local curlaer = ac.accessAppWindow(windowlist[i].name):redirectLayer(refbool(false))
-                        if layerList[curlaer] ~= nil and layerList[curlaer].apps ~= nil then
-                            table.removeItem( layerList[curlaer].apps, windowlist[i].name )
+                        -- 現在リダイレクトされているレイヤーを取得（管理用テーブル操作のため）
+                        local curlayer = ac.accessAppWindow(windowlist[i].name):redirectLayer(refbool(false))
+                        if layerList[curlayer] ~= nil and layerList[curlayer].apps ~= nil then
+                            table.removeItem( layerList[curlayer].apps, windowlist[i].name )
                         end
-                        local layer_in = layerList[y] or {layer = y , pos = vec2(1,1),size = vec2(1,1),obs = true ,apps={} }
+                        local layer_in = layerList[y] or {
+                            layer = y , pos = windowSize ,size = vec2(0,0),obs = false 
+                            ,layerSize = vec2(0,0)
+                            ,uioffsetx = 0.2 ,uioffsety = 0.2 ,uioffsetz = 0
+                            ,rotationx = 0 ,rotationy = 0 ,rotationz = 0
+                            ,uisize = 0.1
+                            ,visible = false
+                            ,apps={} }
                         table.insert(layer_in.apps, windowlist[i].name)
-                        ac.accessAppWindow(windowlist[i].name):setRedirectLayer(y,windowlist[i].layerDuplicate)
-                        layerList[y] = layer_in
+                        -- ここでリダイレクトの処理
+                        local accesser = ac.accessAppWindow(windowlist[i].name)
+                        accesser:setRedirectLayer(y,windowlist[i].layerDuplicate)
+                        -- んー・・・
+                        --layer_in.pos = accesser:position():min(layer_in.pos)
+                        --layer_in.size = (accesser:position()+accesser:size()):max(layer_in.pos)
 
+                        layerList[y] = layer_in
                     end 
                 end
                 
@@ -151,56 +202,62 @@ function redirectConfig()
             ui.nextColumn()
             local dupStore = nil
             if ui.checkbox('##layerDuplicateSwitcher'..i,windowlist[i].layerDuplicate) and not dupStore then
-                -- WindwoあくせさーのでゅぷりけーとをＯＮにする処理を呼ぶ
+                -- チェック入れたらDuplicate
                 ac.accessAppWindow(windowlist[i].name):setRedirectLayer(windowlist[i].layer,not windowlist[i].layerDuplicate)
                 dupStore = windowlist[i].layerDuplicate
             end
-            ui.nextColumn()
-            
+            ui.nextColumn() 
         end
     end
 end 
 
-
 -- UIの処理
 -- 通常のコールバックかSIM_CALLBACKSで呼ぶ
 function uiupdate()
-    -- canvas に描く
-    local windowSize = ac.getSim().windowSize
-    --local accsesser =ac.accessAppWindow('Sidekick'):setRedirectLayer(2,false)
-    --local appPos = accsesser:position()
-    --local appSize = accsesser:size()
-    --local appCenter = appPos+(vec2(appSize.x/2,appSize.y/2))
 
-    --local uv1 = vec2( (appCenter-(vec2(400,400))).x/windowSize.x , (appCenter - (vec2(400,400))).y /windowSize.y)
-    -- local uv2 = vec2( 1,1)
-    -- local uv1 = vec2((appPos.x/windowSize.x),(appPos.y/windowSize.y))
-    -- local uv2 = vec2((800/windowSize.x),(800/windowSize.y))
-    
-    
-    ac.debug('windowSize',windowSize)
-    ac.debug('appPos',appPos)
-    ac.debug('appSize',appSize)
-    ac.debug('appCenter',appCenter)
-    ac.debug('uv1',uv1)
+    for i=1 ,#layerList do
+        if #layerList[i].apps ~= 0 then
+            -- layer.apps のアプリに対してPositionのMin、sizeのMaxを探す
+            local minPos = windowSize*2
+            local maxSizeVec = vec2(0,0)
+            for l =0 , #layerList[i].apps do
+                local window = ac.accessAppWindow(layerList[i].apps[l])
+                if window then 
+                    minPos = minPos:min(window:position())
+                    maxSizeVec = maxSizeVec:max( window:position()+window:size())
+                end 
+            end
+            local layerSize = maxSizeVec - minPos
+            local canvas
+            if layerSize ~= layerList[i].layerSize then 
+                layerList[i].layerSize = layerSize
+                if layerList[i].appCanvas then layerList[i].appCanvas:dispose() end
+                canvas = ui.ExtraCanvas(layerSize,1,render.AntialiasingMode.None,render.TextureFormat.R8G8B8A8.SNorm,render.TextureFlags.None)
+                canvas:setName('layer'..i)
+            else 
+                canvas = layerList[i].appCanvas
+            end
 
-    ac.debug('layers',layerList)
-    ac.debug('curLayer',ac.accessAppWindow('CSPRSTATS'):redirectLayer(refbool(false)))
-  
-    
-    
-    --ui.drawCircle(appCenter,3,rgbm(1,0,0,1))
-    --canvas:clear()
-    --canvas:updateWithShader({
-    --        --p1 = vec2(0,0),
-    --        p2 = windowSize,
-    --        uv1 = uv1,
-    --        --uv2 = uv2,
-    --        textures = {tx1 = 'dynamic::hud::redirected::2'},
-    --        shader = [[
-    --            float4 main(PS_IN pin){
-    --                float4 ret = tx1.Sample(samLinear,pin.Tex);
-    --                return float4(ret.rgba);
-    --            }]]
-    --})
+            canvas:clear()
+            canvas:updateWithShader({
+                    --p1 = vec2(0,0),
+                    p2 = windowSize,
+                    uv1 = minPos/windowSize,
+                    --uv2 = uv2,
+                    textures = {tx1 = 'dynamic::hud::redirected::'..i},
+                    shader = [[
+                        float4 main(PS_IN pin){
+                            float4 ret = tx1.Sample(samLinear,pin.Tex);
+                            return float4(ret.rgba);
+                        }]]
+            })
+            layerList[i].appCanvas = canvas
+        else 
+            -- TODO これがあるとなぜかやり直したときに真っ白になる 要調査
+            if layerList[i].appCanvas then layerList[i].appCanvas:dispose() end 
+        end
+
+    end
+
+    ac.debug('key',#layerList)
 end
