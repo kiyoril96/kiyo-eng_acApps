@@ -124,7 +124,7 @@ function reset(varName)
 end
 
 
-function drawSeetroen()
+function drawMeter()
     -- ㎜ → m
     local textur = instTex.canvas
     local offset_x = settings.offset_x*0.001
@@ -225,12 +225,11 @@ function drawSeetroen()
     end
 end
 
-
-
 function draw3dui(dt)
     if settings.debug or ac.getSim().isVRConnected then 
-        drawSeetroen()
+        drawMeter()
     end 
+    
 end
 
 function windowMain()
@@ -349,7 +348,6 @@ function windowMain()
     if ui.smallButton(' Reset ##coler') then reset('coler') end
 end
 
-
 function mainSettings()
     
     ui.dwriteText('for Debug')
@@ -373,9 +371,8 @@ function mainSettings()
     ui.sameLine()
     if ui.smallButton(' Reset ##debugoffsetzreset') then reset('debugOffset_z') end
 
-
 end
 
 function update()
-    ac.debug('window Size' , ac.accessAppWindow('IMGUI_LUA_kiyo-eng_seetroen_main'):size())
+    --nop
 end 
