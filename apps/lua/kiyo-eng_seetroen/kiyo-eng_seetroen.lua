@@ -12,6 +12,11 @@ local resetVars = {
     ,debugOffset_x = 0
     ,debugOffset_y = 0
     ,debugOffset_z = 0
+    ,colorR = 0.2
+    ,colorG = 0.2
+    ,colorB = 1
+    ,brightness = 3
+    ,opacity = 1
 } 
 
 local settings = ac.storage {
@@ -28,44 +33,43 @@ local settings = ac.storage {
     ,debugOffset_x = 0
     ,debugOffset_y = 0
     ,debugOffset_z = 0
+    ,colorR = 0.2
+    ,colorG = 0.2
+    ,colorB = 1
+    ,brightness = 3
+    ,opacity = 1
 }
 
-function reset(varName)
-    if varName == 'size' then settings.size = resetVars.size
-    elseif varName == 'ipd' then settings.ipd = resetVars.ipd
-    elseif varName == 'offset_x' then settings.offset_x = resetVars.offset_x
-    elseif varName == 'offset_y' then settings.offset_y = resetVars.offset_y
-    elseif varName == 'offset_z' then settings.offset_z = resetVars.offset_z
-    elseif varName == 'sideOffset_x' then settings.sideOffset_x = resetVars.sideOffset_x
-    elseif varName == 'sideOffset_z' then settings.sideOffset_z = resetVars.sideOffset_z
-    elseif varName == 'debugOffset_x' then settings.debugOffset_x = resetVars.debugOffset_x
-    elseif varName == 'debugOffset_y' then settings.debugOffset_y = resetVars.debugOffset_y
-    elseif varName == 'debugOffset_z' then settings.debugOffset_z = resetVars.debugOffset_z
-    end
+local Tex = class('Tex')
+
+function Tex:initialize()
+    self.canvas = ui.ExtraCanvas(vec2(800,800),1,render.AntialiasingMode.None,render.TextureFormat.R8G8B8A8.SNorm,render.TextureFlags.None)
+    self.canvas:setName('scriptTexture')
+    self.update(self)
 end
 
-
-local sqrt = math.sqrt(2)
-local canvas = ui.ExtraCanvas(vec2(800,800),1,render.AntialiasingMode.None,render.TextureFormat.R8G8B8A8.SNorm,render.TextureFlags.None)
-canvas:update(function ()
+function Tex:update()
+    self.canvas:update(function ()
     local center = vec2(400,400)
     ui.beginRotation()
     local meeter = 40
-    local line = meeter/4
+    local color = rgbm(settings.colorR,settings.colorG,settings.colorB,1)
+
     for i = 0, meeter do 
         local s = math.sin(math.lerp(-1,1, i / meeter) * math.pi)
         local c = -math.cos(math.lerp(-1,1, i / meeter) * math.pi)
 
         if (i>=0 and i <= 10) or (i>=30 and i <= 40) then 
-            ui.drawLine(center + vec2(s, c) * 350, center + vec2(s, c) * 400, rgbm(0.2,0.2,1,1), 70)
+            ui.drawLine(center + vec2(s, c) * 350, center + vec2(s, c) * 400, color, 70)
         else
-            ui.drawLine(center + vec2(s, c) * 380, center + vec2(s, c) * 399, rgbm(0.2,0.2,1,1),1)
+            ui.drawLine(center + vec2(s, c) * 380, center + vec2(s, c) * 399, color,1)
         end
     end
     ui.endRotation(45)
-end)
-canvas:setName('scriptTexture')
+    end)
+end
 
+local instTex = Tex()
 local vr_state = nil
 local vrPos = nil
 local vrSide = nil
@@ -98,9 +102,31 @@ local p14 = vec3()
 local p15 = vec3()
 local p16 = vec3()
 
+function reset(varName)
+    if varName == 'size' then settings.size = resetVars.size
+    elseif varName == 'ipd' then settings.ipd = resetVars.ipd
+    elseif varName == 'offset_x' then settings.offset_x = resetVars.offset_x
+    elseif varName == 'offset_y' then settings.offset_y = resetVars.offset_y
+    elseif varName == 'offset_z' then settings.offset_z = resetVars.offset_z
+    elseif varName == 'sideOffset_x' then settings.sideOffset_x = resetVars.sideOffset_x
+    elseif varName == 'sideOffset_z' then settings.sideOffset_z = resetVars.sideOffset_z
+    elseif varName == 'debugOffset_x' then settings.debugOffset_x = resetVars.debugOffset_x
+    elseif varName == 'debugOffset_y' then settings.debugOffset_y = resetVars.debugOffset_y
+    elseif varName == 'debugOffset_z' then settings.debugOffset_z = resetVars.debugOffset_z
+    elseif varName == 'brightness' then settings.brightness = resetVars.brightness
+    elseif varName == 'opacity' then settings.opacity = resetVars.opacity
+    elseif varName == 'coler' then
+        settings.colorR = resetVars.colorR
+        settings.colorG = resetVars.colorG
+        settings.colorB = resetVars.colorB
+        instTex:update()
+    end
+end
+
 
 function drawSeetroen()
     -- ㎜ → m
+    local textur = instTex.canvas
     local offset_x = settings.offset_x*0.001
     local offset_y = settings.offset_y*0.001
     local offset_z = settings.offset_z*0.001
@@ -108,13 +134,15 @@ function drawSeetroen()
     local sideOffset_z = settings.sideOffset_z*0.001
     local ipd = settings.ipd*0.001
     local size = settings.size*0.001
+    local quadColor = rgb(1,1,1)*(settings.brightness^2)
+    local opacity = settings.opacity
 
     if settings.debug then
         vrPos = ac.getCar(0).position
         vrSide = ac.getCar(0).side
         vrUp = ac.getCar(0).up
         vrLook = ac.getCar(0).look
-        offset_x = settings.debugOffset_x + (settings.offset_x*0.001) 
+        offset_x = settings.debugOffset_x + (settings.offset_x*0.001)
         offset_y = settings.debugOffset_y + (settings.offset_y*0.001)
         offset_z = settings.debugOffset_z + (settings.offset_z*0.001)
     else 
@@ -152,8 +180,8 @@ function drawSeetroen()
     p7:set( point_right + (vrHorizon*size) )
     p8:set( point_right + (-worldUp*size) )
 
-    render.quad(p1,p2,p3,p4,rgbm(10,10,10,0.02),canvas)
-    render.quad(p5,p6,p7,p8,rgbm(10,10,10,0.02),canvas)
+    render.quad(p1,p2,p3,p4,rgbm():set(quadColor,opacity),textur)
+    render.quad(p5,p6,p7,p8,rgbm():set(quadColor,opacity),textur)
 
     if settings.isSideActive then
         p9:set(point_left_side +  (-vrHrizonLook*size) )
@@ -165,8 +193,8 @@ function drawSeetroen()
         p15:set(point_right_side + (vrHrizonLook*size) )
         p16:set(point_right_side + (-worldUp*size) )
     
-        render.quad(p9,p10,p11,p12,rgbm(10,10,10,0.02),canvas)
-        render.quad(p13,p14,p15,p16,rgbm(10,10,10,0.02),canvas)
+        render.quad(p9,p10,p11,p12,rgbm():set(quadColor,opacity),textur)
+        render.quad(p13,p14,p15,p16,rgbm():set(quadColor,opacity),textur)
     end
 
     if settings.debug then 
@@ -207,54 +235,125 @@ end
 
 function windowMain()
     ui.dwriteText('Activate')
+    ui.sameLine()
+    ui.offsetCursorX(ui.availableSpaceX()-180)
     if ui.checkbox('Active',settings.isActive) then
         settings.isActive = not settings.isActive
     end
     ui.sameLine()
+    ui.offsetCursorX(10)
     if ui.checkbox('Side Active',settings.isSideActive) then
         settings.isSideActive = not settings.isSideActive
     end
+    ui.offsetCursorY(30)
     
     ui.dwriteText('UI Size (mm)')
+    ui.offsetCursorY(2)
+    ui.setNextItemWidth(ui.availableSpaceX()-70)
     local value,changed = ui.slider('##uisize', settings.size, 5 , 60 , '%.0f')
     if changed then settings.size = value end
     ui.sameLine()
-    if ui.smallButton(' R ##uisizereset') then reset('size') end
-
+    ui.offsetCursorX(ui.availableSpaceX()-50)
+    if ui.smallButton(' Reset ##uisizereset') then reset('size') end
+    ui.offsetCursorY(2)
     ui.dwriteText('IPD (mm)')
+    ui.offsetCursorY(2)
+    ui.setNextItemWidth(ui.availableSpaceX()-70)
     local value,changed = ui.slider('##ipd', settings.ipd, 10 , 80 , '%.02f')
     if changed then settings.ipd = value end
     ui.sameLine()
-    if ui.smallButton(' R ##ipdreset') then reset('ipd') end
-
+    ui.offsetCursorX(ui.availableSpaceX()-50)
+    if ui.smallButton(' Reset ##ipdreset') then reset('ipd') end
+    ui.offsetCursorY(2)
     ui.dwriteText('Offset (mm)')
+    ui.offsetCursorY(2)
+    ui.setNextItemWidth(ui.availableSpaceX()-70)
     local value,changed = ui.slider('##offsetx', settings.offset_x, -100 , 100 , 'Horizontal : %.03f')
     if changed then settings.offset_x = value end
     ui.sameLine()
-    if ui.smallButton(' R ##offsetxreset') then reset('offset_x') end
-
+    ui.offsetCursorX(ui.availableSpaceX()-50)
+    if ui.smallButton(' Reset ##offsetxreset') then reset('offset_x') end
+    ui.offsetCursorY(2)
+    ui.offsetCursorY(2)
+    ui.setNextItemWidth(ui.availableSpaceX()-70)
     local value,changed = ui.slider('##offsety', settings.offset_y, -100 , 100 , 'Upward : %.03f')
     if changed then settings.offset_y = value end
     ui.sameLine()
-    if ui.smallButton(' R ##offsetyreset') then reset('offset_y') end
-
+    ui.offsetCursorX(ui.availableSpaceX()-50)
+    if ui.smallButton(' Reset ##offsetyreset') then reset('offset_y') end
+    ui.offsetCursorY(2)
+    ui.offsetCursorY(2)
+    ui.setNextItemWidth(ui.availableSpaceX()-70)
     local value,changed = ui.slider('##offsetz', settings.offset_z, -100 , 100 , 'Depth : %.03f')
     if changed then settings.offset_z = value end
     ui.sameLine()
-    if ui.smallButton(' R ##offsetzreset') then reset('offset_z') end
-
+    ui.offsetCursorX(ui.availableSpaceX()-50)
+    if ui.smallButton(' Reset ##offsetzreset') then reset('offset_z') end
+    ui.offsetCursorY(2)
     ui.dwriteText('Side Offset (mm)')
+    ui.offsetCursorY(2)
+    ui.setNextItemWidth(ui.availableSpaceX()-70)
     local value,changed = ui.slider('##sideoffsetx', settings.sideOffset_x, -0 , 100 , 'Horizontal : %.03f')
     if changed then settings.sideOffset_x = value end
     ui.sameLine()
-    if ui.smallButton(' R ##sideoffsetxreset') then reset('sideOffset_x') end
-
+    ui.offsetCursorX(ui.availableSpaceX()-50)
+    if ui.smallButton(' Reset ##sideoffsetxreset') then reset('sideOffset_x') end
+    ui.offsetCursorY(2)
+    ui.offsetCursorY(2)
+    ui.setNextItemWidth(ui.availableSpaceX()-70)
     local value,changed = ui.slider('##sideoffsetz', settings.sideOffset_z, -50 , 50 , 'Depth : %.03f')
     if changed then settings.sideOffset_z = value end
     ui.sameLine()
-    if ui.smallButton(' R ##sideoffsetzreset') then reset('sideOffset_z') end
+    ui.offsetCursorX(ui.availableSpaceX()-50)
+    if ui.smallButton(' Reset ##sideoffsetzreset') then reset('sideOffset_z') end
+    ui.offsetCursorY(2)
+    ui.dwriteText('Brightness')
+    ui.offsetCursorY(2)
+    ui.setNextItemWidth(ui.availableSpaceX()-70)
+    local value,changed = ui.slider('##brightness', settings.brightness, -1 , 16 , 'Brightness : %0.2f')
+    if changed then settings.brightness = value end
+    ui.sameLine()
+    ui.offsetCursorX(ui.availableSpaceX()-50)
+    if ui.smallButton(' Reset ##brightness') then reset('brightness') end
+    ui.offsetCursorY(2)
+    ui.dwriteText('Opacity')
+    ui.offsetCursorY(2)
+    ui.setNextItemWidth(ui.availableSpaceX()-70)
+    local value,changed = ui.slider('##opacity', settings.opacity, 0 , 1 , 'Opacity : %0.3f')
+    if changed then settings.opacity = value end
+    ui.sameLine()
+    ui.offsetCursorX(ui.availableSpaceX()-50)
+    if ui.smallButton(' Reset ##opacity') then reset('opacity') end
+    ui.offsetCursorY(2)
+    ui.dwriteText('Color')
+    local uiColor = rgb(settings.colorR,settings.colorG,settings.colorB)
+    local flags = bit.bor(
+        ui.ColorPickerFlags.NoAlpha
+        , ui.ColorPickerFlags.NoSidePreview
+        , ui.ColorPickerFlags.NoInputs
+        , ui.ColorPickerFlags.NoTooltip
+    )
 
+    if ui.colorButton('##colerbutton',uiColor,flags,vec2(50,20)) then
+        ui.popup(function ()
+            if ui.colorPicker('##color', uiColor,flags ) then 
+                settings.colorR = uiColor.r
+                settings.colorG = uiColor.g
+                settings.colorB = uiColor.b
+                instTex:update()
+            end
+        end)
+    end
+    ui.sameLine()
+    ui.offsetCursorX(ui.availableSpaceX()-50)
+    if ui.smallButton(' Reset ##coler') then reset('coler') end
+end
+
+
+function mainSettings()
+    
     ui.dwriteText('for Debug')
+    ui.sameLine()
     if ui.checkbox('Debug',settings.debug) then
         settings.debug = not settings.debug
     end
@@ -263,21 +362,20 @@ function windowMain()
     local value,changed = ui.slider('##debugoffsetx', settings.debugOffset_x, -1 , 1 , 'Horizontal : %.03f')
     if changed then settings.debugOffset_x = value end
     ui.sameLine()
-    if ui.smallButton(' R ##debugoffsetxreset') then reset('debugOffset_x') end
-
+    if ui.smallButton(' Reset ##debugoffsetxreset') then reset('debugOffset_x') end
+    ui.setNextItemWidth(ui.availableSpaceX()-70)
     local value,changed = ui.slider('##debugoffsety', settings.debugOffset_y, -1 , 1 , 'Upward : %.03f')
     if changed then settings.debugOffset_y = value end
     ui.sameLine()
-    if ui.smallButton(' R ##debugoffsetyreset') then reset('debugOffset_y') end
-
+    if ui.smallButton(' Reset ##debugoffsetyreset') then reset('debugOffset_y') end
     local value,changed = ui.slider('##debugoffsetz', settings.debugOffset_z, -1 , 1 , 'Depth : %.03f')
     if changed then settings.debugOffset_z = value end
     ui.sameLine()
-    if ui.smallButton(' R ##debugoffsetzreset') then reset('debugOffset_z') end
+    if ui.smallButton(' Reset ##debugoffsetzreset') then reset('debugOffset_z') end
+
 
 end
 
-
 function update()
-    -- nop
+    ac.debug('window Size' , ac.accessAppWindow('IMGUI_LUA_kiyo-eng_seetroen_main'):size())
 end 
