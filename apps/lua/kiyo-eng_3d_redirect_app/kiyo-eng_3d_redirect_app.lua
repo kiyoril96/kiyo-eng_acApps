@@ -29,6 +29,7 @@ local p1 =nil
 local p2 =nil
 local p3 =nil
 local p4 =nil
+local appInit = false
 
 -- RENDER_CALLBACKS
 function draw3dui(dt)
@@ -278,7 +279,8 @@ function redirectSelecter()
 end 
 
 local settingName = nil
-local selectedSetting = configNames:get('CONFIGS','config_'..configNames:get('SELECTED','select',0),"name")
+local selectedSetting = configNames:get('CONFIGS','config_'..configNames:get('SELECTED','select',0),"default")
+local settingOnStart = configNames:get('CONFIGS','config_'..configNames:get('STARTUP','select',0),"default")
 --ac.debug('confignames',configNames:get('CONFIGS','config_'..configNames:get('SELECTED','select',0),"name"))
 function windowMain()
     ui.tabBar('##3duiconfig',ui.TabBarFlags.None,function() 
@@ -329,6 +331,21 @@ function windowMain()
                 if ui.button('LOAD ##load',vec2(50,40),ui.ButtonFlags.None) then
                     loadSettings(selectedSetting)
                 end
+                ui.offsetCursorY(30)
+                ui.dwriteText('Load Settings on Starup',20)
+                ui.dwriteText('Select Settings : ')
+                ui.sameLine()
+                ui.setNextItemWidth(-100)
+                ui.combo('##onStartup',settingOnStart,function() 
+                    for index,key in configNames:iterateValues('CONFIGS','config',true) do
+                        if ui.selectable(configNames:get('CONFIGS',key,"name")) then
+                            settingOnStart = configNames:get('CONFIGS',key,"name")
+                            configNames:set('STARTUP','select',index-1)
+                            configNames:save()
+                        end
+                    end
+                end )
+                
             end)
         end)
     end)
@@ -454,6 +471,12 @@ end
 -- UIの処理
 -- 通常のコールバックかSIM_CALLBACKSで呼ぶ
 function uiupdate()
+    if not appInit then
+        settingOnStart = configNames:get('CONFIGS','config_'..configNames:get('STARTUP','select',0),"default")
+        loadSettings(settingOnStart)
+        appInit = true
+    end
+
     for i=1 ,#layerList do
         if layerList[i] ~= nil and #layerList[i].apps ~= 0 then
             -- layer.apps のアプリに対してPositionのMin、sizeのMaxを探す
