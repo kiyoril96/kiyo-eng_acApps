@@ -37,7 +37,7 @@ function windowMain()
         deleteOne()
     end
     ui.offsetCursorY(5)
-    if ui.button('Delete All ##deleteAll',vec2(100,30) ) then
+    if ui.button('Delete All##deleteAll',vec2(100,30) ) then
         deleteAll()
     end
 
