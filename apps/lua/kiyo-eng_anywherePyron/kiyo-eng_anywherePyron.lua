@@ -33,11 +33,11 @@ function windowMain()
         addOne(getPutPos())
     end
     ui.offsetCursorY(10)
-    if ui.button('Delete one ##deleteAll',vec2(100,30) ) then
+    if ui.button('Delete One##deleteAll',vec2(100,30) ) then
         deleteOne()
     end
     ui.offsetCursorY(5)
-    if ui.button('Delete all ##deleteAll',vec2(100,30) ) then
+    if ui.button('Delete All ##deleteAll',vec2(100,30) ) then
         deleteAll()
     end
 
