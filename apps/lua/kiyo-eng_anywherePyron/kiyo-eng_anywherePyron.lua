@@ -89,7 +89,7 @@ end
 
 local cones = {}
 function addOne(pos)
-    local cone = conesRef:loadKN5('./cone.kn5')
+    local cone = conesRef:loadKN5('./cone/cone.kn5')
     local rigitBody =nil
     if config.isPhys then
         local aa, bb = cone:getLocalAABB()
