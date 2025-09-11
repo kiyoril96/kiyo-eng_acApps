@@ -84,7 +84,6 @@ function getPutPos()
     local car = ac.getCar(0)
     local wheels = car.wheels 
     local offset = (car.side * config.putOffsetX) +(car.up *config.putOffsetY) +(car.look * config.putOffsetZ)
-    vec3(config.putOffsetX,config.putOffsetY,config.putOffsetZ)
     return (( wheels[0].contactPoint + wheels[1].contactPoint )/2)  + offset
 end
 
@@ -103,8 +102,9 @@ function addOne(pos)
         rigitBody:setTransformation(transform)
         rigitBody:setDamping(damping,damping,true)
         rigitBody:onCollision(function (c) 
-            local dir = ac.getCar(c).velocity:normalize()
-            local foce = -ac.getCar(c).acceleration 
+            local car = ac.getCar(c)
+            local dir = vec3(car.velocity):normalize()
+            local foce = car.acceleration 
             rigitBody:addForce(dir*foce , false, rigitBody:getLastHitPos(), false) 
             end)
     end
