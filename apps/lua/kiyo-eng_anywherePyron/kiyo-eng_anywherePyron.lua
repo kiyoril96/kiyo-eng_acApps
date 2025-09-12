@@ -10,7 +10,34 @@ local config = ac.storage{
     putOffsetZ = 5
 }
 
+local onlineConeEvent =nil
+
+if ac.getSim().isOnlineRace then
+    onlineConeEvent = ac.OnlineEvent(
+    {pos = ac.StructItem.vec3(),
+     col = ac.StructItem.rgbm()},
+    function (sender , data )
+        if sender.index ~= 0 then
+            addOne(data.pos,true)
+        end
+    end
+    )
+end
+
 function windowMain()
+
+    conesRef:setVisible(config.isActive)
+    if config.isActive then
+        if config.isPutMode then
+            local ray = render.createMouseRay()
+            local hitDistance = trackRef:raycast(ray,false)
+            if hitDistance ~= -1 and (ac.getUI().isMouseLeftKeyClicked or pyronButton:pressed()) and not ui.mouseBusy() then
+                local pos = ray.pos:addScaled(ray.dir,hitDistance)
+                addOne(pos)
+            end
+        end
+    end
+
     if ui.checkbox('##active',config.isActive) then
         config.isActive = not config.isActive
     end
@@ -88,7 +115,12 @@ function getPutPos()
 end
 
 local cones = {}
-function addOne(pos)
+function addOne(pos,flg)
+
+    if ac.getSim().isOnlineRace and onlineConeEvent ~= nil and not flg then
+        onlineConeEvent{pos=pos,col=rgbm(1,1,1,1)}
+    end
+
     local cone = conesRef:loadKN5('./cone/cone.kn5')
     local rigitBody =nil
     if config.isPhys then
@@ -101,12 +133,17 @@ function addOne(pos)
         transform.position = pos
         rigitBody:setTransformation(transform)
         rigitBody:setDamping(damping,damping,true)
-        rigitBody:onCollision(function (c) 
-            local car = ac.getCar(c)
-            local dir = vec3(car.velocity):normalize()
-            local foce = car.acceleration 
-            rigitBody:addForce(dir*foce , false, rigitBody:getLastHitPos(), false) 
-            end)
+        rigitBody:onCollision(function (c)
+            local car = nil
+            local dir = vec3()
+            local foce = nil 
+            if c ~= nil then 
+                car = ac.getCar(c)
+                dir = vec3(car.velocity):normalize()
+                foce = vec3(car.acceleration):length()
+                rigitBody:addForce(dir*foce , false, rigitBody:getLastHitPos(), false) 
+            end
+        end)
     end
     cone:setPosition(pos)
     table.insert(cones,{cone,rigitBody})
@@ -125,17 +162,8 @@ function deleteAll()
 end
 
 function update(dt)
-    conesRef:setVisible(config.isActive)
-    if config.isActive then 
-        if config.isPutMode then 
-            local ray = render.createMouseRay()
-            local hitDistance = trackRef:raycast(ray,false)
-            if hitDistance ~= -1 and ac.getUI().isMouseLeftKeyClicked then
-                local pos = ray.pos:addScaled(ray.dir,hitDistance)
-                addOne(pos)
-            end
-        end
-        if pyronButton:pressed() then
+    if config.isActive then
+        if pyronButton:pressed()  then
             addOne(getPutPos())
         end
         for i = 1 ,#cones do
