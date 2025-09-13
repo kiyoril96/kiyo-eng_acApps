@@ -16,6 +16,8 @@ local Index = 0
 
 local onlineConeEvent =nil
 
+--ac.debug('test',ac.getSim().directUDPMessagingAvailable)
+
 if ac.getSim().isOnlineRace then
     onlineConeEvent = ac.OnlineEvent(
     {pos = ac.StructItem.vec3(),
@@ -24,7 +26,7 @@ if ac.getSim().isOnlineRace then
         if sender.index ~= 0 then
             addOne(data.po,data.col,true)
         end
-    end
+    end,nil,false
     )
 
     ac.onClientConnected(function () 
