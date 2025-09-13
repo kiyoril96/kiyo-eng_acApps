@@ -24,17 +24,19 @@ if ac.getSim().isOnlineRace then
      col = ac.StructItem.rgbm()},
     function (sender , data )
         if sender.index ~= 0 then
-            addOne(data.po,data.col,true)
+            addOne(data.pos,data.col,true)
         end
     end,nil,false
     )
 
-    ac.onClientConnected(function () 
-
+    ac.onClientConnected(function (c,id) 
         for i=1 , #cones do
-            onlineConeEvent{cones[i][1]:getPosition(),cones[i][3]}
+            local pos = cones[i][1]:getPosition()
+            local col = cones[i][3]
+            onlineConeEvent{pos=pos,col=col}
         end
-
+        ac.debug('carIndex',c)
+        ac.debug('id',id)
     end)
 
 end
@@ -139,7 +141,7 @@ function addOne(pos,TextureCollar,flg)
     if  ac.checkAdminPrivileges() then end
 
     if ac.getSim().isOnlineRace and onlineConeEvent ~= nil and not flg then
-        onlineConeEvent{pos=pos,col=rgbm(1,1,1,1)}
+        onlineConeEvent{pos=pos,col=TextureCollar}
     end
 
     Index = Index + 1
