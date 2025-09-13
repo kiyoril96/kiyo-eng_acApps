@@ -7,8 +7,12 @@ local config = ac.storage{
     isPhys = false,
     putOffsetX = 0,
     putOffsetY = 0,
-    putOffsetZ = 5
+    putOffsetZ = 5,
+    color = rgbm(1,0,0,1)
+
 }
+local cones = {}
+local Index = 0
 
 local onlineConeEvent =nil
 
@@ -18,22 +22,31 @@ if ac.getSim().isOnlineRace then
      col = ac.StructItem.rgbm()},
     function (sender , data )
         if sender.index ~= 0 then
-            addOne(data.pos,true)
+            addOne(data.po,data.col,true)
         end
     end
     )
+
+    ac.onClientConnected(function () 
+
+        for i=1 , #cones do
+            onlineConeEvent{cones[i][1]:getPosition(),cones[i][3]}
+        end
+
+    end)
+
 end
 
 function windowMain()
 
     conesRef:setVisible(config.isActive)
     if config.isActive then
-        if config.isPutMode then
+        if config.isPutMode then     
             local ray = render.createMouseRay()
             local hitDistance = trackRef:raycast(ray,false)
-            if hitDistance ~= -1 and (ac.getUI().isMouseLeftKeyClicked or pyronButton:pressed()) and not ui.mouseBusy() then
+            if hitDistance ~= -1 and (ac.getUI().isMouseLeftKeyClicked ) and not ui.mouseBusy() then
                 local pos = ray.pos:addScaled(ray.dir,hitDistance)
-                addOne(pos)
+                addOne(pos,config.color)
             end
         end
     end
@@ -57,7 +70,7 @@ function windowMain()
     ui.dwriteText('Put physics cone')
     ui.offsetCursorY(10)
     if ui.button('Add One##addOne',vec2(100,30) ) then
-        addOne(getPutPos())
+        addOne(getPutPos(),config.color)
     end
     ui.offsetCursorY(10)
     if ui.button('Delete One##deleteAll',vec2(100,30) ) then
@@ -105,6 +118,11 @@ function windowMain()
     ui.sameLine()
     if ui.smallButton('R##resetz') then config.putOffsetZ =5 end
 
+    ui.setCursor(vec2(186,66))
+    ui.textAligned("Pyron color:",vec2(1,0.5),vec2(74,20))
+    ui.sameLine()
+    ui.colorButton('Color', config.color, ui.ColorPickerFlags.PickerHueBar)
+
 end
 
 function getPutPos()
@@ -114,14 +132,16 @@ function getPutPos()
     return (( wheels[0].contactPoint + wheels[1].contactPoint )/2)  + offset
 end
 
-local cones = {}
-function addOne(pos,flg)
+function addOne(pos,TextureCollar,flg)
+
+    if  ac.checkAdminPrivileges() then end
 
     if ac.getSim().isOnlineRace and onlineConeEvent ~= nil and not flg then
         onlineConeEvent{pos=pos,col=rgbm(1,1,1,1)}
     end
 
-    local cone = conesRef:loadKN5('./cone/cone.kn5')
+    Index = Index + 1
+    local cone = conesRef:createNode("Pyron_"..Index,false):loadKN5('./cone.kn5')
     local rigitBody =nil
     if config.isPhys then
         local aa, bb = cone:getLocalAABB()
@@ -145,14 +165,21 @@ function addOne(pos,flg)
             end
         end)
     end
+
+    trackRef:findNodes("Pyron_"..Index)
+        :findMeshes("EXT_Color_Cone")
+        :ensureUniqueMaterials()
+        :setMaterialTexture("txDiffuse",TextureCollar)
     cone:setPosition(pos)
-    table.insert(cones,{cone,rigitBody})
+    table.insert(cones,{cone,rigitBody,TextureCollar:clone()})
 end
 
 function deleteOne()
-    local latestCone = cones[#cones][1]
-    latestCone:dispose()
-    table.remove(cones,#cones)
+    if #cones > 0 then
+        local latestCone = cones[#cones][1]
+        latestCone:dispose()
+        table.remove(cones,#cones)
+    end
 end
 
 function deleteAll()
@@ -164,7 +191,7 @@ end
 function update(dt)
     if config.isActive then
         if pyronButton:pressed()  then
-            addOne(getPutPos())
+            addOne(getPutPos(),config.color)
         end
         for i = 1 ,#cones do
             if cones[i][2] then
