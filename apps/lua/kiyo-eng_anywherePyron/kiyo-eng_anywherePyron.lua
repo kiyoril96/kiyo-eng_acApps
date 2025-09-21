@@ -14,36 +14,31 @@ local config = ac.storage{
 local cones = {}
 local Index = 0
 
-local onlineConeEvent =nil
-
---ac.debug('test',ac.getSim().directUDPMessagingAvailable)
+local SharedPylonEvent =nil
 
 if ac.getSim().isOnlineRace then
-    onlineConeEvent = ac.OnlineEvent(
-    {pos = ac.StructItem.vec3(),
-     col = ac.StructItem.rgbm()},
+    SharedPylonEvent = ac.OnlineEvent(
+    {
+        ac.StructItem.key('AS_ShardPylon'),
+        position = ac.StructItem.vec3(),
+        isphys = ac.StructItem.boolean(),
+        color = ac.StructItem.vec4()},
     function (sender , data )
-        if sender.index ~= 0 then
-            addOne(data.pos,data.col,true)
+        if sender == nil then
+            addOne(data.position,data.isphys,data.color,true)
         end
     end,nil,false
     )
+end
 
-    ac.onClientConnected(function (c,id) 
-        for i=1 , #cones do
-            local pos = cones[i][1]:getPosition()
-            local col = cones[i][3]
-            onlineConeEvent{pos=pos,col=col}
-        end
-        ac.debug('carIndex',c)
-        ac.debug('id',id)
-    end)
-
+function setEnableAllPhysics(active)
+    for i=1 , #cones do
+        if cones[i][2] then cones[i][2]:setEnabled(active) end
+    end 
 end
 
 function windowMain()
 
-    conesRef:setVisible(config.isActive)
     if config.isActive then
         if config.isPutMode then     
             local ray = render.createMouseRay()
@@ -57,6 +52,8 @@ function windowMain()
 
     if ui.checkbox('##active',config.isActive) then
         config.isActive = not config.isActive
+        conesRef:setVisible(config.isActive)
+        setEnableAllPhysics(config.isActive)
     end
     ui.sameLine()
     ui.dwriteText('Active')
@@ -136,18 +133,18 @@ function getPutPos()
     return (( wheels[0].contactPoint + wheels[1].contactPoint )/2)  + offset
 end
 
-function addOne(pos,TextureCollar,flg)
+function addOne(pos,physics,TextureCollar,flg)
 
-    if  ac.checkAdminPrivileges() then end
+    --if  ac.checkAdminPrivileges() then end
 
-    if ac.getSim().isOnlineRace and onlineConeEvent ~= nil and not flg then
-        onlineConeEvent{pos=pos,col=TextureCollar}
-    end
+    -- if ac.getSim().isOnlineRace and SharedPylonEvent ~= nil and not flg then
+    --     SharedPylonEvent{position=pos,isPhys=physics,color=vec4():set(TextureCollar.r,TextureCollar.g,TextureCollar.b,TextureCollar.a)}
+    -- end
 
     Index = Index + 1
     local cone = conesRef:createNode("Pyron_"..Index,false):loadKN5('./cone.kn5')
     local rigitBody =nil
-    if config.isPhys then
+    if physics then
         local aa, bb = cone:getLocalAABB()
         local size = bb - aa
         local collider = physics.Collider.Box(size, vec3(0,size.y/2,0) ,vec3(0,0,1) ,vec3(0,1,0), false)
@@ -180,13 +177,16 @@ end
 
 function deleteOne()
     if #cones > 0 then
-        local latestCone = cones[#cones][1]
-        latestCone:dispose()
+        cones[#cones][1]:dispose()
+        if cones[#cones][2] then cones[#cones][2]:dispose() end
         table.remove(cones,#cones)
     end
 end
 
 function deleteAll()
+    for i=1 , #cones do
+        if cones[i][2] then cones[i][2]:dispose() end
+    end
     conesRef:dispose()
     conesRef=trackRef:createNode('CONES',false)
     table.clear(cones)
