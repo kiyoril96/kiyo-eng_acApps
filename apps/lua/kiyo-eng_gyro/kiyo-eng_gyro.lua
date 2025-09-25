@@ -209,7 +209,7 @@ function draw3dui(dt)
     p11 = center + ( camup*(harfSize*sqrt))
     p12 = center + (-camup*(harfSize*sqrt))
 
-    gyro()
+    --gyro()
 
     --up = ac.getCar(0).up
     --side = ac.getCar(0).side
