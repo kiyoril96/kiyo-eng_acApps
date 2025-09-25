@@ -9,7 +9,6 @@ local config = ac.storage{
     putOffsetY = 0,
     putOffsetZ = 5,
     color = rgbm(1,0,0,1)
-
 }
 local cones = {}
 local Index = 0
@@ -33,7 +32,7 @@ end
 
 function setEnableAllPhysics(active)
     for i=1 , #cones do
-        if cones[i][2] then cones[i][2]:setEnabled(active) end
+        if cones[i][2] then cones[i][2]:setInWorld(active) end
     end 
 end
 
@@ -45,7 +44,8 @@ function windowMain()
             local hitDistance = trackRef:raycast(ray,false)
             if hitDistance ~= -1 and (ac.getUI().isMouseLeftKeyClicked ) and not ui.mouseBusy() then
                 local pos = ray.pos:addScaled(ray.dir,hitDistance)
-                addOne(pos,config.color)
+                addOne(pos,config.isPhys,config.color)
+                
             end
         end
     end
@@ -71,7 +71,7 @@ function windowMain()
     ui.dwriteText('Put physics cone')
     ui.offsetCursorY(10)
     if ui.button('Add One##addOne',vec2(100,30) ) then
-        addOne(getPutPos(),config.color)
+        addOne(getPutPos(),config.isPhys,config.color)
     end
     ui.offsetCursorY(10)
     if ui.button('Delete One##deleteAll',vec2(100,30) ) then
@@ -123,7 +123,6 @@ function windowMain()
     ui.textAligned("Pyron color:",vec2(1,0.5),vec2(74,20))
     ui.sameLine()
     ui.colorButton('Color', config.color, ui.ColorPickerFlags.PickerHueBar)
-
 end
 
 function getPutPos()
@@ -133,7 +132,7 @@ function getPutPos()
     return (( wheels[0].contactPoint + wheels[1].contactPoint )/2)  + offset
 end
 
-function addOne(pos,physics,TextureCollar,flg)
+function addOne(pos,isPhys,TextureCollar,flg)
 
     --if  ac.checkAdminPrivileges() then end
 
@@ -144,13 +143,13 @@ function addOne(pos,physics,TextureCollar,flg)
     Index = Index + 1
     local cone = conesRef:createNode("Pyron_"..Index,false):loadKN5('./cone.kn5')
     local rigitBody =nil
-    if physics then
+    if isPhys then
         local aa, bb = cone:getLocalAABB()
         local size = bb - aa
         local collider = physics.Collider.Box(size, vec3(0,size.y/2,0) ,vec3(0,0,1) ,vec3(0,1,0), false)
         local transform = cone:getTransformationRaw()
         local damping = 0.1 / ac.getSim().fps 
-        rigitBody = physics.RigidBody(collider, 0.8 )
+        rigitBody = physics.RigidBody(collider, 0.8)
         transform.position = pos
         rigitBody:setTransformation(transform)
         rigitBody:setDamping(damping,damping,true)
@@ -165,6 +164,7 @@ function addOne(pos,physics,TextureCollar,flg)
                 rigitBody:addForce(dir*foce , false, rigitBody:getLastHitPos(), false) 
             end
         end)
+        rigitBody:setInWorld(false)
     end
 
     trackRef:findNodes("Pyron_"..Index)
@@ -173,19 +173,22 @@ function addOne(pos,physics,TextureCollar,flg)
         :setMaterialTexture("txDiffuse",TextureCollar)
     cone:setPosition(pos)
     table.insert(cones,{cone,rigitBody,TextureCollar:clone()})
+    
 end
 
 function deleteOne()
     if #cones > 0 then
         cones[#cones][1]:dispose()
-        if cones[#cones][2] then cones[#cones][2]:dispose() end
+        if cones[#cones][2] then cones[#cones][2]:setInWorld(false) end
         table.remove(cones,#cones)
     end
 end
 
 function deleteAll()
     for i=1 , #cones do
-        if cones[i][2] then cones[i][2]:dispose() end
+        if cones[i][2] ~= nil then 
+            cones[i][2]:setInWorld(false)
+        end
     end
     conesRef:dispose()
     conesRef=trackRef:createNode('CONES',false)
@@ -194,13 +197,14 @@ end
 
 function update(dt)
     if config.isActive then
-        if pyronButton:pressed()  then
-            addOne(getPutPos(),config.color)
-        end
         for i = 1 ,#cones do
             if cones[i][2] then
+                if not cones[#cones][2]:isInWorld() then cones[#cones][2]:setInWorld(true) end 
                 cones[i][1]:setTransformationFrom(cones[i][2])
             end
+        end
+        if pyronButton:pressed()  then
+            addOne(getPutPos(),config.isPhys,config.color)
         end
     end
 end
