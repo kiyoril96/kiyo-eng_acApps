@@ -8,7 +8,8 @@ local config = ac.storage{
     putOffsetX = 0,
     putOffsetY = 0,
     putOffsetZ = 5,
-    color = rgbm(1,0,0,1)
+    color = rgbm(1,0,0,1),
+    isPhysOnStart = false
 }
 local cones = {}
 local Index = 0
@@ -16,18 +17,26 @@ local Index = 0
 local SharedPylonEvent =nil
 
 if ac.getSim().isOnlineRace then
-    SharedPylonEvent = ac.OnlineEvent(
-    {
-        ac.StructItem.key('AS_ShardPylon'),
-        position = ac.StructItem.vec3(),
-        isphys = ac.StructItem.boolean(),
-        color = ac.StructItem.vec4()},
-    function (sender , data )
-        if sender == nil then
-            addOne(data.position,data.isphys,data.color,true)
-        end
-    end,nil,false
-    )
+    ac.accessAppWindow('IMGUI_LUA_kiyo-eng_anywherePyron_main'):setVisible(false)
+    ac.unloadApp()
+
+    function windowMain()
+        ui.dwriteText('Not supported in online session.',20)
+    end
+    
+    return
+    -- SharedPylonEvent = ac.OnlineEvent(
+    -- {
+    --     ac.StructItem.key('AS_ShardPylon'),
+    --     position = ac.StructItem.vec3(),
+    --     isphys = ac.StructItem.boolean(),
+    --     color = ac.StructItem.vec4()},
+    -- function (sender , data )
+    --     if sender == nil then
+    --         addOne(data.position,data.isphys,data.color,true)
+    --     end
+    -- end,nil,false
+    -- )
 end
 
 function setEnableAllPhysics(active)
@@ -69,6 +78,20 @@ function windowMain()
     end
     ui.sameLine()
     ui.dwriteText('Put physics cone')
+    ui.offsetCursor(vec2(10,10))
+    if not config.isPhys then
+        ui.pushDisabled()
+    end
+    if ui.checkbox('##isPhysOnStart',config.isPhysOnStart) then
+            config.isPhysOnStart = not config.isPhysOnStart
+    end
+    ui.sameLine()
+    
+    ui.dwriteText('Enable on load')
+    if not config.isPhys then
+        ui.popDisabled()
+    end
+    
     ui.offsetCursorY(10)
     if ui.button('Add One##addOne',vec2(100,30) ) then
         addOne(getPutPos(),config.isPhys,config.color)
@@ -88,16 +111,22 @@ function windowMain()
     ui.sameLine()
     ui.offsetCursorX(5)
     pyronButton:control(vec2(150,30))
+    ui.sameLine()
 
     ui.setCursor(vec2(180,130))
     ui.dwriteText('Add one put offset')
 
     ui.setCursor(vec2(180,160))
+    local step = ui.loadStoredNumber(0,0)
     ui.dwriteText('  X :')
     ui.setCursor(vec2(220,160))
     ui.setNextItemWidth(100)
     local value, changed = ui.slider('##offsetX',config.putOffsetX,-20,20)
     if changed then config.putOffsetX = value end
+    ui.sameLine()
+    if ui.smallButton('-##minusx') then config.putOffsetX = config.putOffsetX-step end
+    ui.sameLine()
+    if ui.smallButton('+##pulusx') then config.putOffsetX = config.putOffsetX+step end
     ui.sameLine()
     if ui.smallButton('R##resetx') then config.putOffsetX =0 end
 
@@ -108,6 +137,10 @@ function windowMain()
     local value, changed = ui.slider('##offsetY',config.putOffsetY,-20,20)
     if changed then config.putOffsetY = value end
     ui.sameLine()
+    if ui.smallButton('-##minusy') then config.putOffsetY = config.putOffsetY-step end
+    ui.sameLine()
+    if ui.smallButton('+##pulusy') then config.putOffsetY = config.putOffsetY+step end
+    ui.sameLine()
     if ui.smallButton('R##resety') then config.putOffsetY =0 end
 
     ui.setCursor(vec2(180,220))
@@ -117,7 +150,18 @@ function windowMain()
     local value, changed = ui.slider('##offsetZ',config.putOffsetZ,-20,20)
     if changed then config.putOffsetZ = value end
     ui.sameLine()
+    if ui.smallButton('-##minusz') then config.putOffsetZ = config.putOffsetZ-step end
+    ui.sameLine()
+    if ui.smallButton('+##pulusz') then config.putOffsetZ = config.putOffsetZ+step end
+    ui.sameLine()
     if ui.smallButton('R##resetz') then config.putOffsetZ =5 end
+
+    ui.setCursor(vec2(260,250))
+    ui.dwriteText('  Step :')
+    ui.setNextItemWidth(50)
+    ui.setCursor(vec2(330,250))
+    local value, changed = ui.slider('##step',ui.loadStoredNumber(0,0),0,15,'%.f')
+    if changed then ui.storeNumber(0,value) end
 
     ui.setCursor(vec2(186,66))
     ui.textAligned("Pyron color:",vec2(1,0.5),vec2(74,20))
@@ -164,7 +208,9 @@ function addOne(pos,isPhys,TextureCollar,flg)
                 rigitBody:addForce(dir*foce , false, rigitBody:getLastHitPos(), false) 
             end
         end)
-        rigitBody:setInWorld(false)
+        if config.isPhysOnStart then   
+            rigitBody:setInWorld(false)
+        end
     end
 
     trackRef:findNodes("Pyron_"..Index)
@@ -203,9 +249,9 @@ function update(dt)
                 cones[i][1]:setTransformationFrom(cones[i][2])
             end
         end
-        if pyronButton:pressed()  then
+        if pyronButton:pressed() then 
             addOne(getPutPos(),config.isPhys,config.color)
-        end
+        end        
     end
 end
 
