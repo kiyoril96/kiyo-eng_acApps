@@ -16,26 +16,108 @@ local uisize
 local isinit = false
 local uix
 local uiy
+local wheels = {
+  t0dx =  ac.StructItem.float()
+  ,t1dx = ac.StructItem.float()
+  ,t2dx = ac.StructItem.float()
+  ,t3dx = ac.StructItem.float()
+
+  ,t0dy = ac.StructItem.float()
+  ,t1dy = ac.StructItem.float()
+  ,t2dy = ac.StructItem.float()
+  ,t3dy = ac.StructItem.float()
+
+  ,t0fx = ac.StructItem.float()
+  ,t1fx = ac.StructItem.float()
+  ,t2fx = ac.StructItem.float()
+  ,t3fx = ac.StructItem.float()
+
+  ,t0fy = ac.StructItem.float()
+  ,t1fy = ac.StructItem.float()
+  ,t2fy = ac.StructItem.float()
+  ,t3fy = ac.StructItem.float()
+}
+local rs = nil
 function script.init()
   uisize = ac.getUI().windowSize
   uix = uisize.x/4
   uiy = uisize.y/4
+  rs = ac.ReplayStream(wheels,nil, 1)
   isinit = true
 end
 
--- local datastore = {}
-
-function script.getState()
+local time = 0
+local counter = 0
+function script.getState(dt)
+  time = time + dt
   forcus = ac.getSim().focusedCar
   car = ac.getCar(forcus)
-  t0 = car.wheels[0]
-  t1 = car.wheels[1]
-  t2 = car.wheels[2]
-  t3 = car.wheels[3]
-  -- datastore[ac.getSim().replayFrames] = {t0,t1,t2,t3} 
-  ac.debug('mass',car.mass)
-  ac.debug('load',vec4(t0.load,t1.load,t2.load,t3.load))
-  ac.debug('sumload',t0.load+t1.load+t2.load+t3.load )
+  local frame = tonumber(ac.getSim().frame)
+  if ac.isInReplayMode() then
+    frame = ac.getSim().replayCurrentFrame
+    t0 = {
+      load = car.wheels[0].load
+      ,ndSlip = car.wheels[0].ndSlip
+      ,dx = ac.readReplayBlob('t0dx'..frame)
+      ,dy = ac.readReplayBlob('t0dy'..frame)
+      ,fx = ac.readReplayBlob('t0fx'..frame)
+      ,fy = ac.readReplayBlob('t0fy'..frame)
+    }
+    t1 = {
+      load = car.wheels[1].load
+      ,ndSlip = car.wheels[1].ndSlip
+      ,dx = ac.readReplayBlob('t1dx'..frame)
+      ,dy = ac.readReplayBlob('t1dy'..frame)
+      ,fx = ac.readReplayBlob('t1fx'..frame)
+      ,fy = ac.readReplayBlob('t1fy'..frame)
+    }
+    t2 = {
+      load = car.wheels[2].load
+      ,ndSlip = car.wheels[2].ndSlip
+      ,dx = ac.readReplayBlob('t2dx'..frame)
+      ,dy = ac.readReplayBlob('t2dy'..frame)
+      ,fx = ac.readReplayBlob('t2fx'..frame)
+      ,fy = ac.readReplayBlob('t2fy'..frame)
+    }
+    t3 = {
+      load = car.wheels[3].load
+      ,ndSlip = car.wheels[3].ndSlip
+      ,dx =  ac.readReplayBlob('t3dx'..frame)
+      ,dy =  ac.readReplayBlob('t3dy'..frame)
+      ,fx =  ac.readReplayBlob('t3fx'..frame)
+      ,fy =  ac.readReplayBlob('t3fy'..frame)
+    }
+  else
+    t0 = car.wheels[0]
+    t1 = car.wheels[1]
+    t2 = car.wheels[2]
+    t3 = car.wheels[3]
+    if time >= (ac.getSim().replayFrameMs)/1000 then 
+      ac.writeReplayBlob('t0dx'..counter, t0.dx)
+      ac.writeReplayBlob('t1dx'..counter, t1.dx)
+      ac.writeReplayBlob('t2dx'..counter, t2.dx)
+      ac.writeReplayBlob('t3dx'..counter, t3.dx)
+      ac.writeReplayBlob('t0dy'..counter, t0.dy)
+      ac.writeReplayBlob('t1dy'..counter, t1.dy)
+      ac.writeReplayBlob('t2dy'..counter, t2.dy)
+      ac.writeReplayBlob('t3dy'..counter, t3.dy)
+      ac.writeReplayBlob('t0fx'..counter, t0.fx)
+      ac.writeReplayBlob('t1fx'..counter, t1.fx)
+      ac.writeReplayBlob('t2fx'..counter, t2.fx)
+      ac.writeReplayBlob('t3fx'..counter, t3.fx)
+      ac.writeReplayBlob('t0fy'..counter, t0.fy)
+      ac.writeReplayBlob('t1fy'..counter, t1.fy)
+      ac.writeReplayBlob('t2fy'..counter, t2.fy)
+      ac.writeReplayBlob('t3fy'..counter, t3.fy)
+      counter = counter + 1
+      time = 0
+    end
+  end
+
+  ac.debug('dx',{t0.dx,t1.dx,t2.dx,t3.dx})
+  ac.debug('time',time)
+  ac.debug('counter',counter)
+  ac.debug('ReplayStream',rs)
 end
 
 function script.drawEllipse(center, radius, color, numSegments, thickness)
@@ -59,13 +141,13 @@ function script.setui(car,wheel,offsetx,offsety)
   local gforce = vec3():set(car.acceleration*(load),car.acceleration*(load),car.acceleration*(load))*scale
   ac.debug('gforce',gforce)
 
-  if ac.isInReplayMode() then 
-    load = wheel.load
-    DX = 1
-    DY = 1
-    FX = 0
-    FY = 0
-  end
+  --if ac.isInReplayMode() then 
+  --  load = wheel.load
+  --  DX = 1
+  --  DY = 1
+  --  FX = 0
+  --  FY = 0
+  --end
   local radius_x = script.scale(load*DY,scale)
   local radius_y = script.scale(load*DX,scale)
   local fliction_x = script.scale(-(FY),scale)
@@ -153,9 +235,9 @@ nil
   end)
 end)
 
-function script.simUpdate()
+function script.simUpdate(dt)
   if isinit == false then script.init() end
-  script.getState()
+  script.getState(dt)
   if settings.isactive then
     ui.transparentWindow('Fliction_circle', vec2(0.0), uisize, function ()
       script.setui(car,t0,uix*1+settings.offsetX,uiy*1+settings.offsetY)
@@ -165,9 +247,9 @@ function script.simUpdate()
     end)
   end
 
-  ac.debug('curFrame' , ac.getSim().frame)
+  --ac.debug('time' , ac.getSim().gameTime)
   ac.debug('replayFrame' , ac.getSim().replayCurrentFrame)
-  ac.debug('replayFrames' , ac.getSim().replayFrames)
+  ac.debug('replayFramems' , ac.getSim().replayFrameMs)
   if ac.getSim().isReplayActive then
     ac.debug('equalsReplay',ac.getSim().frame == ac.getSim().replayCurrentFrame )
   end
