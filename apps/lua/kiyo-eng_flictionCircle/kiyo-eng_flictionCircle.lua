@@ -1,114 +1,142 @@
-local settings = ac.storage {
-  isactive = true,
-  offsetX =0,
-  offsetY =0,
-  scale = 2,
-  thick = 3
-}
 local obs = require('shared/utils/obs')
 local t0
 local t1
 local t2
 local t3
 local car
-local forcus 
+local focus 
 local uisize
 local isinit = false
 local uix
 local uiy
-function script.init()
-  uisize = ac.getUI().windowSize
-  uix = uisize.x/4
-  uiy = uisize.y/4
+local tyresConfig
 
-  local resolution_retio
-  obs.notify(function ()
-    obs.register('kiyo-eng_OBSTexture', 'FlictionCircle', obs.Flags.Transparent+obs.Flags.UserSize,
-  nil
-  , function (canvas,size)
-    canvas:clear()
-    resolution_retio = vec2(size.x/uisize.x,size.y/uisize.y)
-    local offset = vec2(settings.offsetX*resolution_retio.x,settings.offsetY*resolution_retio.y)
-
-    canvas:update(function() 
-      script.setui(car,t0,(size.x/4)*1+offset.x,(size.y/4)*1+offset.y)
-      script.setui(car,t1,(size.x/4)*3-offset.x,(size.y/4)*1+offset.y)
-      script.setui(car,t2,(size.x/4)*1+offset.x,(size.y/4)*3-offset.y)
-      script.setui(car,t3,(size.x/4)*3-offset.x,(size.y/4)*3-offset.y)
-    end)
-  end)
-  end
-  )
-
-  isinit = true
-end
-
--- local datastore = {}
-
-function script.getState()
-  forcus = ac.getSim().focusedCar
-  car = ac.getCar(forcus)
-  t0 = car.wheels[0]
-  t1 = car.wheels[1]
-  t2 = car.wheels[2]
-  t3 = car.wheels[3]
-  -- datastore[ac.getSim().replayFrames] = {t0,t1,t2,t3} 
-  ac.debug('mass',car.mass)
-  ac.debug('load',vec4(t0.load,t1.load,t2.load,t3.load))
-  ac.debug('sumload',t0.load+t1.load+t2.load+t3.load )
-end
+local settings = ac.storage {
+  isactive = true,
+  gforce = false,
+  composite = false,
+  relativeTyer = false,
+  guage = false,
+  offsetX =0,
+  offsetY =0,
+  scale = 2,
+  thick = 3
+}
 
 function script.drawEllipse(center, radius, color, numSegments, thickness)
   ui.pathUnevenArcTo(center, radius, 0, math.pi * 2.1 , numSegments or 12)
   ui.pathStroke(color, true, thickness or 1)
 end
 
+function script.init()
+  uisize = ac.getUI().windowSize
+  uix = uisize.x/4
+  uiy = uisize.y/4
+  tyresConfig = ac.INIConfig.carData(ac.getSim().focusedCar,'tyres.ini')
+  
+  -- obs init 
+  local resolution_retio
+  obs.notify(function ()
+    obs.register('kiyo-eng_OBSTexture', 'FlictionCircle', obs.Flags.Transparent+obs.Flags.UserSize
+    , function (size)
+      resolution_retio = vec2(size.x/uisize.x,size.y/uisize.y)
+    end
+    , function (canvas,size)
+      local offset = vec2(settings.offsetX*resolution_retio.x,settings.offsetY*resolution_retio.y)
+      canvas:clear()
+      canvas:update(function() 
+        script.setui(car,t0,(size.x/4)*1+offset.x,(size.y/4)*1+offset.y,'FL')
+        script.setui(car,t1,(size.x/4)*3-offset.x,(size.y/4)*1+offset.y,'FR')
+        script.setui(car,t2,(size.x/4)*1+offset.x,(size.y/4)*3-offset.y,'RL')
+        script.setui(car,t3,(size.x/4)*3-offset.x,(size.y/4)*3-offset.y,'RR')
+      end)
+  end)
+  end
+  )
+  isinit = true
+end
+
+local curFocus
+function script.getState()
+  focus = ac.getSim().focusedCar
+  if curFocus ~= focus then 
+    curFocus = focus
+    tyresConfig = nil
+    tyresConfig = ac.INIConfig.carData(curFocus,'tyres.ini')
+  end
+  car = ac.getCar(curFocus)
+  t0 = car.wheels[0]
+  t1 = car.wheels[1]
+  t2 = car.wheels[2]
+  t3 = car.wheels[3]
+end
+
 function script.scale(x,retio)
   return x*retio
 end
 
-function script.setui(car,wheel,offsetx,offsety)
+local color_circle = rgbm() 
+local color_circle_alt = rgbm(0,0,0,0.1)
+local color_fliction = rgbm(0,1,1,1)
+local color_slip = rgbm(1,0.5,0,1)
+local color_gauge = rgbm(1,1,1,1)
+local color_gauge_alt = rgbm(0,0,0,0.5)
+local segment = 40
+local thick = 0
+local angle = 0
+function script.setui(car,wheel,offsetx,offsety,tyreLabel)
   local offset = vec2(offsetx,offsety)
-  local scale = settings.scale * 0.01
+  local scaleRetio = settings.scale * 0.01
   local load = wheel.load
   local DX = wheel.dx
   local DY = wheel.dy
   local FX = wheel.fx
   local FY = wheel.fy
-  
-  local gforce = vec3():set(car.acceleration*(load),car.acceleration*(load),car.acceleration*(load))*scale
-  ac.debug('gforce',gforce)
+  local setctionName = ''
+  if tyreLabel == 'FL'or tyreLabel == 'FR' then setctionName = 'FRONT' else setctionName = 'REAR' end
 
   if ac.isInReplayMode() then 
     load = wheel.load
-    DX = 1
-    DY = 1
+    -- local gain = tyresConfig:get(setctionName,'LS_EXPX',1)
+    -- local decreseD = 1
+      DX = tyresConfig:get(setctionName,'DX_REF',1)
+      DY = tyresConfig:get(setctionName,'DY_REF',1)
+    if load > tyresConfig:get(setctionName,'FZ0',1)*100 then
+      DX = DX * (math.log(( load-(tyresConfig:get(setctionName,'FZ0',1.0)*100) ),tyresConfig:get(setctionName,'LS_EXPX',1)))
+      DY = DY * (math.log(( load-(tyresConfig:get(setctionName,'FZ0',1.0)*100) ),tyresConfig:get(setctionName,'LS_EXPY',1)))
+    end
     FX = 0
     FY = 0
   end
-  local radius_x = script.scale(load*DY,scale)
-  local radius_y = script.scale(load*DX,scale)
-  local fliction_x = script.scale(-(FY),scale)
-  local fliction_y = script.scale(FX,scale)
+  
+  local radius_x = script.scale(load*DY,scaleRetio)
+  local radius_y = script.scale(load*DX,scaleRetio)
+  local fliction_x = script.scale(-(FY),scaleRetio)
+  local fliction_y = script.scale(FX,scaleRetio)
+  local gaugeSize = settings.scale*80
   local ndslip = wheel.ndSlip
-  local color_circle = rgbm(wheel.ndSlip,1.5-wheel.ndSlip,0.5,1)
-  local color_fliction = rgbm(0,1,1,1)
-  local color_slip = rgbm(1,0.5,0,1)
-  local segment = 40
-  local thick = settings.thick
   
+  thick = settings.thick
+  color_circle = rgbm(wheel.ndSlip,1.5-wheel.ndSlip,0.5,1)
 
-  -- 車体の加速度
-  --ui.drawCircleFilled(offset,thick,rgbm(0,0,1,1),segment)
-  ui.drawLine(offset,vec2((offset.x+(gforce.x)),(offset.y+(gforce.z))),rgbm(0,0,1,1),thick*1.5)
-  ui.drawCircleFilled( vec2((offset.x+(gforce.x)),offset.y+(gforce.z)),thick+2,rgbm(0,0,1,1),segment)
+  -- 枠 サイズてきとう
+  if settings.guage then 
+    ui.drawLine(offset-vec2(gaugeSize,0),offset+vec2(gaugeSize,0),color_gauge,thick*0.5)
+    ui.drawLine(offset-vec2(0,gaugeSize),offset+vec2(0,gaugeSize),color_gauge,thick*0.5)
+    ui.drawCircle(offset,gaugeSize,color_gauge,segment,thick*0.5)
+  end
+
+  -- トー角に合わせてUIを動かすか
+  if settings.relativeTyer then angle = -(wheel.toeIn-90) else angle = 90 end 
+
+  ui.beginRotation()
   
-  -- 合成
-  ui.drawLine(offset,vec2((offset.x+(gforce.x+fliction_x)),(offset.y+(gforce.z+fliction_y))),rgbm(1,1,1,1),thick)
-  ui.drawCircleFilled( vec2((offset.x+(gforce.x+fliction_x)),(offset.y+(gforce.z+fliction_y))),thick+2,rgbm(1,1,1,1),segment)
-
-  --摩擦円の描画
-  script.drawEllipse(offset,vec2(radius_x,radius_y),rgbm(0,0,0,0.1),segment,thick+10)
+  --最大摩擦力（摩擦円）
+  if settings.guage then
+    ui.drawLine(offset-vec2(radius_x,0),offset+vec2(radius_x,0),color_gauge_alt,thick*0.5)
+    ui.drawLine(offset-vec2(0,radius_y),offset+vec2(0,radius_y),color_gauge_alt,thick*0.5)
+  end
+  script.drawEllipse(offset,vec2(radius_x,radius_y),color_circle_alt,segment,thick*2)
   script.drawEllipse(offset,vec2(radius_x,radius_y),color_circle,segment,thick)
 
   --発生している摩擦力のベクトル
@@ -116,32 +144,59 @@ function script.setui(car,wheel,offsetx,offsety)
   ui.drawLine(offset,vec2(offset.x+fliction_x,offset.y+fliction_y),color_fliction,thick*2)
   ui.drawCircleFilled(vec2(offset.x+fliction_x,offset.y+fliction_y),thick+2,color_fliction,segment)
 
-  --どんだけ滑ってるか
+  --スリップ率
   ui.drawCircleFilled(offset,thick,color_slip,segment)
   ui.drawLine(offset,vec2((offset.x+(fliction_x*ndslip)),(offset.y+(fliction_y*ndslip))),color_slip,thick*2)
   ui.drawCircleFilled( vec2((offset.x+(fliction_x*ndslip)),offset.y+(fliction_y*ndslip)),thick+2,color_slip,segment)
+
+  if not ac.isInReplayMode() then 
+    local gforce = vec3():set(car.acceleration*(load),car.acceleration*(load),car.acceleration*(load))*scaleRetio
+    local rotatedFoce = gforce:rotate(quat.fromAngleAxis(-math.rad(wheel.toeIn), vec3(0,1,0)))
+    if settings.gforce then 
+      -- 車体の加速度
+      ui.drawCircleFilled(offset,thick,rgbm(0,0,1,1),segment)
+      ui.drawLine(offset,vec2((offset.x+(rotatedFoce.x)),(offset.y+(rotatedFoce.z))),rgbm(0,0,1,1),thick*1.5)
+      ui.drawCircleFilled( vec2((offset.x+(rotatedFoce.x)),(offset.y+(rotatedFoce.z))),thick+2,rgbm(0,0,1,1),segment)
+    end
+    if settings.composite then
+      -- 合成
+      ui.drawCircleFilled(offset,thick,color_gauge,segment)
+      ui.drawLine(offset,vec2((offset.x+(rotatedFoce.x+fliction_x)),(offset.y+(rotatedFoce.z+fliction_y))),color_gauge,thick*1.5)
+      ui.drawCircleFilled( vec2((offset.x+(rotatedFoce.x+fliction_x)),(offset.y+(rotatedFoce.z+fliction_y))),thick+2,color_gauge,segment)
+    end
+  end
+
+  ui.endPivotRotation(angle, offset)
+
+  local tyerIndex
+  if tyreLabel == 'FL' then tyerIndex=0
+  elseif tyreLabel == 'FR' then tyerIndex=1
+  elseif tyreLabel == 'RL' then tyerIndex=2
+  elseif tyreLabel == 'RR' then tyerIndex=3
+  end
+
+  ac.debug(tyerIndex..'.'..tyreLabel..'_dx',DX)
+  ac.debug(tyerIndex..'.'..tyreLabel..'_dy',DY)
+  ac.debug(tyerIndex..'.'..tyreLabel..'_fx',FX)
+  ac.debug(tyerIndex..'.'..tyreLabel..'_fy',FY)
 end
 
-function script.ty0()
-  script.setui(car,t0,ui.availableSpaceX()/2,ui.availableSpaceY()/2)
-end
-
-function script.ty1()
-  script.setui(car,t1,ui.availableSpaceX()/2,ui.availableSpaceY()/2)
-end
-
-function script.ty2()
-  script.setui(car,t2,ui.availableSpaceX()/2,ui.availableSpaceY()/2)
-end
-
-function script.ty3()
-  script.setui(car,t3,ui.availableSpaceX()/2,ui.availableSpaceY()/2)
-end
+-- FL
+function script.ty0() script.setui(car,t0,ui.availableSpaceX()/2,ui.availableSpaceY()/2,'FL') end
+-- FR
+function script.ty1() script.setui(car,t1,ui.availableSpaceX()/2,ui.availableSpaceY()/2,'FR') end
+-- RL
+function script.ty2() script.setui(car,t2,ui.availableSpaceX()/2,ui.availableSpaceY()/2,'RL') end
+-- RR
+function script.ty3() script.setui(car,t3,ui.availableSpaceX()/2,ui.availableSpaceY()/2,'RR') end
 
 function script.windowMain()
-  if ui.checkbox('active',settings.isactive) then
-    settings.isactive = not settings.isactive
-  end
+  if ui.checkbox('Active',settings.isactive) then settings.isactive = not settings.isactive end
+  if ui.checkbox('Gforce Vector',settings.gforce) then settings.gforce = not settings.gforce end
+  if ui.checkbox('Composite Vector',settings.composite) then settings.composite = not settings.composite end
+  if ui.checkbox('RelativeTyer',settings.relativeTyer) then settings.relativeTyer = not settings.relativeTyer end
+  if ui.checkbox('Guage',settings.guage) then settings.guage = not settings.guage end
+  
   local windowSize = uisize
   local value,changed = ui.slider('##offsetx', settings.offsetX, -(windowSize.x/4), windowSize.x/4, 'OFFSETX: %.0f')
   if changed then settings.offsetX = value end
@@ -161,17 +216,10 @@ function script.simUpdate()
   script.getState()
   if settings.isactive then
     ui.transparentWindow('Fliction_circle', vec2(0.0), uisize, function ()
-      script.setui(car,t0,uix*1+settings.offsetX,uiy*1+settings.offsetY)
-      script.setui(car,t1,uix*3-settings.offsetX,uiy*1+settings.offsetY)
-      script.setui(car,t2,uix*1+settings.offsetX,uiy*3-settings.offsetY)
-      script.setui(car,t3,uix*3-settings.offsetX,uiy*3-settings.offsetY)
+      script.setui(car,t0,uix*1+settings.offsetX,uiy*1+settings.offsetY,'FL')
+      script.setui(car,t1,uix*3-settings.offsetX,uiy*1+settings.offsetY,'FR')
+      script.setui(car,t2,uix*1+settings.offsetX,uiy*3-settings.offsetY,'RL')
+      script.setui(car,t3,uix*3-settings.offsetX,uiy*3-settings.offsetY,'RR')
     end)
   end
-
-  --ac.debug('curFrame' , ac.getSim().frame)
-  --ac.debug('replayFrame' , ac.getSim().replayCurrentFrame)
-  --ac.debug('replayFrames' , ac.getSim().replayFrames)
-  --if ac.getSim().isReplayActive then
-  --  ac.debug('equalsReplay',ac.getSim().frame == ac.getSim().replayCurrentFrame )
-  --end
 end
