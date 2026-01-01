@@ -22,6 +22,7 @@ local settings = ac.storage {
   thick = 3
 }
 
+-- radius vec2(縦,横)
 function script.drawEllipse(center, radius, color, numSegments, thickness)
   ui.pathUnevenArcTo(center, radius, 0, math.pi * 2.1 , numSegments or 12)
   ui.pathStroke(color, true, thickness or 1)
@@ -112,10 +113,11 @@ function script.setui(car,wheel,offsetx,offsety,tyreLabel)
     FY = 0
   end
 
-  local radius_x = script.scale(load*DY,scaleRetio)
-  local radius_y = script.scale(load*DX,scaleRetio)
-  local fliction_x = script.scale(-(FY),scaleRetio)
-  local fliction_y = script.scale(FX,scaleRetio)
+  -- DXが縦 DYが横
+  local radius_x = script.scale(load*DX,scaleRetio)
+  local radius_y = script.scale(load*DY,scaleRetio)
+  local fliction_x = script.scale(FX,scaleRetio)
+  local fliction_y = script.scale(FY,scaleRetio)
   local ndslip = wheel.ndSlip
   local gaugeSize = script.scale(mass_1g*dxRef,scaleRetio)
   local gauge2GSize = script.scale(mass_1g*2*dxRef,scaleRetio)
@@ -129,7 +131,7 @@ function script.setui(car,wheel,offsetx,offsety,tyreLabel)
     ui.drawCircle(offset,gauge2GSize,color_gauge,segment,thick*0.3)
   end
   -- トー角に合わせてUIを動かすか
-  if settings.relativeTyer then angle = -(wheel.toeIn-90) else angle = 90 end 
+  if settings.relativeTyer then angle = -(wheel.toeIn) else angle = 0 end 
   ui.beginRotation()
   --最大摩擦力（摩擦円）
   if settings.guage then
@@ -163,14 +165,14 @@ function script.setui(car,wheel,offsetx,offsety,tyreLabel)
     if settings.gforce then 
       -- 車体の加速度
       ui.drawCircleFilled(offset,thick,rgbm(0,0,1,1),segment)
-      ui.drawLine(offset,vec2((offset.x+(rotatedFoce.x)),(offset.y+(rotatedFoce.z))),rgbm(0,0,1,1),thick*1.5)
-      ui.drawCircleFilled( vec2((offset.x+(rotatedFoce.x)),(offset.y+(rotatedFoce.z))),thick+2,rgbm(0,0,1,1),segment)
+      ui.drawLine(offset,vec2((offset.x+(rotatedFoce.z)),(offset.y+(-rotatedFoce.x))),rgbm(0,0,1,1),thick*1.5)
+      ui.drawCircleFilled( vec2((offset.x+(rotatedFoce.z)),(offset.y+(-rotatedFoce.x))),thick+2,rgbm(0,0,1,1),segment)
     end
     if settings.composite then
       -- 合成
       ui.drawCircleFilled(offset,thick,color_gauge,segment)
-      ui.drawLine(offset,vec2((offset.x+(rotatedFoce.x+fliction_x)),(offset.y+(rotatedFoce.z+fliction_y))),color_gauge,thick*1.5)
-      ui.drawCircleFilled( vec2((offset.x+(rotatedFoce.x+fliction_x)),(offset.y+(rotatedFoce.z+fliction_y))),thick+2,color_gauge,segment)
+      ui.drawLine(offset,vec2((offset.x+(rotatedFoce.z+fliction_x)),(offset.y+(-rotatedFoce.x+fliction_y))),color_gauge,thick*1.5)
+      ui.drawCircleFilled( vec2((offset.x+(rotatedFoce.z+fliction_x)),(offset.y+(-rotatedFoce.x+fliction_y))),thick+2,color_gauge,segment)
     end
   end
   ui.endPivotRotation(angle, offset)
