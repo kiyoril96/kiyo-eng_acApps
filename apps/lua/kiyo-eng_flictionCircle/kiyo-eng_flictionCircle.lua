@@ -10,7 +10,6 @@ local isinit = false
 local uix
 local uiy
 local tyresConfig
-
 local settings = ac.storage {
   isactive = true,
   gforce = false,
@@ -92,45 +91,46 @@ function script.setui(car,wheel,offsetx,offsety,tyreLabel)
   local DY = wheel.dy
   local FX = wheel.fx
   local FY = wheel.fy
+  local mass_1g = car.mass*2.45 -- 1/4N=9.8/4
   local setctionName = ''
   if tyreLabel == 'FL'or tyreLabel == 'FR' then setctionName = 'FRONT' else setctionName = 'REAR' end
+  local dxRef = tyresConfig:get(setctionName,'DX_REF',1)*wheel.surfaceGrip
+  local dyRef = tyresConfig:get(setctionName,'DY_REF',1)*wheel.surfaceGrip
 
   if ac.isInReplayMode() then 
+    local load_remap = math.remap(load,0,mass_1g,-1,0)
+    local calc_dx = ((dxRef)^(dxRef-load_remap))
+    local calc_dy = ((dyRef)^(dyRef-load_remap))
     load = wheel.load
-    -- local gain = tyresConfig:get(setctionName,'LS_EXPX',1)
-    -- local decreseD = 1
-      DX = tyresConfig:get(setctionName,'DX_REF',1)
-      DY = tyresConfig:get(setctionName,'DY_REF',1)
-    if load > tyresConfig:get(setctionName,'FZ0',1)*100 then
-      DX = DX * (math.log(( load-(tyresConfig:get(setctionName,'FZ0',1.0)*100) ),tyresConfig:get(setctionName,'LS_EXPX',1)))
-      DY = DY * (math.log(( load-(tyresConfig:get(setctionName,'FZ0',1.0)*100) ),tyresConfig:get(setctionName,'LS_EXPY',1)))
+      DX = calc_dx
+      DY = calc_dy
+    if load > tyresConfig:get(setctionName,'FZ0',1)*9.8 then
+      DX = calc_dx * (math.log(( load-(tyresConfig:get(setctionName,'FZ0',1.0)*9.8) ),tyresConfig:get(setctionName,'LS_EXPX',1)))
+      DY = calc_dy * (math.log(( load-(tyresConfig:get(setctionName,'FZ0',1.0)*9.8) ),tyresConfig:get(setctionName,'LS_EXPY',1)))
     end
     FX = 0
     FY = 0
   end
-  
+
   local radius_x = script.scale(load*DY,scaleRetio)
   local radius_y = script.scale(load*DX,scaleRetio)
   local fliction_x = script.scale(-(FY),scaleRetio)
   local fliction_y = script.scale(FX,scaleRetio)
-  local gaugeSize = settings.scale*80
   local ndslip = wheel.ndSlip
-  
+  local gaugeSize = script.scale(mass_1g*dxRef,scaleRetio)
+  local gauge2GSize = script.scale(mass_1g*2*dxRef,scaleRetio)
   thick = settings.thick
   color_circle = rgbm(wheel.ndSlip,1.5-wheel.ndSlip,0.5,1)
-
-  -- 枠 サイズてきとう
+  -- 枠
   if settings.guage then 
-    ui.drawLine(offset-vec2(gaugeSize,0),offset+vec2(gaugeSize,0),color_gauge,thick*0.5)
-    ui.drawLine(offset-vec2(0,gaugeSize),offset+vec2(0,gaugeSize),color_gauge,thick*0.5)
-    ui.drawCircle(offset,gaugeSize,color_gauge,segment,thick*0.5)
+    ui.drawLine(offset-vec2(gauge2GSize,0),offset+vec2(gauge2GSize,0),color_gauge,thick*0.3)
+    ui.drawLine(offset-vec2(0,gauge2GSize),offset+vec2(0,gauge2GSize),color_gauge,thick*0.3)
+    ui.drawCircle(offset,gaugeSize,color_gauge,segment,thick*0.3)
+    ui.drawCircle(offset,gauge2GSize,color_gauge,segment,thick*0.3)
   end
-
   -- トー角に合わせてUIを動かすか
   if settings.relativeTyer then angle = -(wheel.toeIn-90) else angle = 90 end 
-
   ui.beginRotation()
-  
   --最大摩擦力（摩擦円）
   if settings.guage then
     ui.drawLine(offset-vec2(radius_x,0),offset+vec2(radius_x,0),color_gauge_alt,thick*0.5)
@@ -138,17 +138,25 @@ function script.setui(car,wheel,offsetx,offsety,tyreLabel)
   end
   script.drawEllipse(offset,vec2(radius_x,radius_y),color_circle_alt,segment,thick*2)
   script.drawEllipse(offset,vec2(radius_x,radius_y),color_circle,segment,thick)
-
+  --test 
+  --local load_remap = math.remap(load,0,mass_1g,-1,0)
+  --local calc_dx = ((dxRef)^(dxRef-load_remap))
+  --local calc_dy = ((dyRef)^(dyRef-load_remap))
+  --local test_calc_dx = calc_dx
+  --local test_calc_dy = calc_dy
+  --if load > tyresConfig:get(setctionName,'FZ0',1)*9.8 then
+  --  test_calc_dx = calc_dx * (math.log(( load-(tyresConfig:get(setctionName,'FZ0',1.0)*9.8) ),tyresConfig:get(setctionName,'LS_EXPX',1)))
+  --  test_calc_dy = calc_dy * (math.log(( load-(tyresConfig:get(setctionName,'FZ0',1.0)*9.8) ),tyresConfig:get(setctionName,'LS_EXPY',1)))
+  --end
+  --script.drawEllipse(offset,vec2(script.scale(load*test_calc_dy,scaleRetio),script.scale(load*test_calc_dx,scaleRetio)),rgbm(1,1,0,1),segment,thick)
   --発生している摩擦力のベクトル
   ui.drawCircleFilled(offset,thick,color_fliction,segment)
   ui.drawLine(offset,vec2(offset.x+fliction_x,offset.y+fliction_y),color_fliction,thick*2)
   ui.drawCircleFilled(vec2(offset.x+fliction_x,offset.y+fliction_y),thick+2,color_fliction,segment)
-
   --スリップ率
   ui.drawCircleFilled(offset,thick,color_slip,segment)
   ui.drawLine(offset,vec2((offset.x+(fliction_x*ndslip)),(offset.y+(fliction_y*ndslip))),color_slip,thick*2)
   ui.drawCircleFilled( vec2((offset.x+(fliction_x*ndslip)),offset.y+(fliction_y*ndslip)),thick+2,color_slip,segment)
-
   if not ac.isInReplayMode() then 
     local gforce = vec3():set(car.acceleration*(load),car.acceleration*(load),car.acceleration*(load))*scaleRetio
     local rotatedFoce = gforce:rotate(quat.fromAngleAxis(-math.rad(wheel.toeIn), vec3(0,1,0)))
@@ -165,20 +173,19 @@ function script.setui(car,wheel,offsetx,offsety,tyreLabel)
       ui.drawCircleFilled( vec2((offset.x+(rotatedFoce.x+fliction_x)),(offset.y+(rotatedFoce.z+fliction_y))),thick+2,color_gauge,segment)
     end
   end
-
   ui.endPivotRotation(angle, offset)
-
-  local tyerIndex
-  if tyreLabel == 'FL' then tyerIndex=0
-  elseif tyreLabel == 'FR' then tyerIndex=1
-  elseif tyreLabel == 'RL' then tyerIndex=2
-  elseif tyreLabel == 'RR' then tyerIndex=3
-  end
-
-  ac.debug(tyerIndex..'.'..tyreLabel..'_dx',DX)
-  ac.debug(tyerIndex..'.'..tyreLabel..'_dy',DY)
-  ac.debug(tyerIndex..'.'..tyreLabel..'_fx',FX)
-  ac.debug(tyerIndex..'.'..tyreLabel..'_fy',FY)
+  -- local tyerIndex
+  -- if tyreLabel == 'FL' then tyerIndex=0
+  -- elseif tyreLabel == 'FR' then tyerIndex=1
+  -- elseif tyreLabel == 'RL' then tyerIndex=2
+  -- elseif tyreLabel == 'RR' then tyerIndex=3
+  -- end
+  -- ac.debug(tyerIndex..'.'..tyreLabel..'_dx',DX)
+  -- ac.debug(tyerIndex..'.'..tyreLabel..'_dy',DY)
+  -- ac.debug(tyerIndex..'.'..tyreLabel..'_fx',FX)
+  -- ac.debug(tyerIndex..'.'..tyreLabel..'_fy',FY)
+  -- ac.debug(tyerIndex..'.'..tyreLabel..'_calc_dx',test_calc_dx)
+  -- ac.debug(tyerIndex..'.'..tyreLabel..'_calc_dy',test_calc_dy)
 end
 
 -- FL
@@ -196,20 +203,16 @@ function script.windowMain()
   if ui.checkbox('Composite Vector',settings.composite) then settings.composite = not settings.composite end
   if ui.checkbox('RelativeTyer',settings.relativeTyer) then settings.relativeTyer = not settings.relativeTyer end
   if ui.checkbox('Guage',settings.guage) then settings.guage = not settings.guage end
-  
   local windowSize = uisize
   local value,changed = ui.slider('##offsetx', settings.offsetX, -(windowSize.x/4), windowSize.x/4, 'OFFSETX: %.0f')
   if changed then settings.offsetX = value end
   local value,changed = ui.slider('##offsety', settings.offsetY, -(windowSize.y/4), windowSize.y/4, 'OFFSETY: %.0f')
   if changed then settings.offsetY = value end
-
   local value,changed = ui.slider('##scale', settings.scale, 1, 5, 'SCALE: %.02f')
   if changed then settings.scale = value end
-
   local value,changed = ui.slider('##thick', settings.thick, 1, 10, 'THICKNESS: %.02f')
   if changed then settings.thick = value end
 end
-
 
 function script.simUpdate()
   if isinit == false then script.init() end
