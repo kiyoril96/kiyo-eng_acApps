@@ -132,6 +132,8 @@ local flcam
 local frcam
 local rlcam
 local rrcam
+local maxtravelF = 0
+local maxtravelR = 0
 obs.notify( function()
   flcam = obs.register(
     'kiyo-eng_OBSTexture'
@@ -153,6 +155,16 @@ obs.notify( function()
           float4 ret = tx1.Sample(samLinear,pin.Tex);
         return float4(ret.rgb,1);
       }]]})
+      canvas:update(function()
+        if math.abs(wheel.suspensionTravel) > maxtravelF then maxtravelF = math.abs(wheel.suspensionTravel) end
+        ui.drawLine(vec2(50,0),vec2(50,ui.availableSpaceY()),rgbm(0,0,0,1),7)
+        ui.drawLine(vec2(100,ui.availableSpaceY()/2),vec2(0,ui.availableSpaceY()/2),rgbm(0,0,0,1),7)
+
+        ui.drawCircleFilled(vec2(50,math.remap(wheel.suspensionTravel,maxtravelF*1.2,0,ui.availableSpaceY(),0) ),20,rgbm(1,1,1,1))
+        ui.drawCircleFilled(vec2(50,math.remap(wheel.suspensionTravel,maxtravelF*1.2,0,0,ui.availableSpaceY()) ),20,rgbm(1,1,1,1))
+        ac.debug('test_susTrav_FL',wheel.suspensionTravel)
+        ac.debug('test_ExtraSusTrav_FL',physics.getExtendedDamperTravel(0,0))
+      end)
     end
   )
   frcam = obs.register(
@@ -175,6 +187,16 @@ obs.notify( function()
           float4 ret = tx1.Sample(samLinear,pin.Tex);
         return float4(ret.rgb,1);
       }]]})
+      canvas:update(function()
+        if math.abs(wheel.suspensionTravel) > maxtravelF then maxtravelF = math.abs(wheel.suspensionTravel) end
+        ui.drawLine(vec2(ui.availableSpaceX()-50,0),vec2(ui.availableSpaceX()-50,ui.availableSpaceY()),rgbm(0,0,0,1),7)
+        ui.drawLine(vec2(ui.availableSpaceX()-100,ui.availableSpaceY()/2),vec2(ui.availableSpaceX(),ui.availableSpaceY()/2),rgbm(0,0,0,1),7)
+
+        ui.drawCircleFilled(vec2(ui.availableSpaceX()-50,math.remap(wheel.suspensionTravel,maxtravelF*1.2,0,ui.availableSpaceY(),0) ),20,rgbm(1,1,1,1))
+        ui.drawCircleFilled(vec2(ui.availableSpaceX()-50,math.remap(wheel.suspensionTravel,maxtravelF*1.2,0,0,ui.availableSpaceY()) ),20,rgbm(1,1,1,1))
+        ac.debug('test_susTrav_FR',wheel.suspensionTravel)
+        ac.debug('test_ExtraSusTrav_FR',physics.getExtendedDamperTravel(0,1))
+      end)
     end
   )
   rlcam = obs.register(
@@ -197,6 +219,16 @@ obs.notify( function()
           float4 ret = tx1.Sample(samLinear,pin.Tex);
         return float4(ret.rgb,1);
       }]]})
+      canvas:update(function()
+        if math.abs(wheel.suspensionTravel) > maxtravelR then maxtravelR = math.abs(wheel.suspensionTravel) end
+        ui.drawLine(vec2(50,0),vec2(50,ui.availableSpaceY()),rgbm(0,0,0,1),7)
+        ui.drawLine(vec2(100,ui.availableSpaceY()/2),vec2(0,ui.availableSpaceY()/2),rgbm(0,0,0,1),7)
+
+        ui.drawCircleFilled(vec2(50,math.remap(wheel.suspensionTravel,maxtravelR*1.2,0,ui.availableSpaceY(),0) ),20,rgbm(1,1,1,1))
+        ui.drawCircleFilled(vec2(50,math.remap(wheel.suspensionTravel,maxtravelR*1.2,0,0,ui.availableSpaceY()) ),20,rgbm(1,1,1,1))
+        ac.debug('test_susTrav_RL',wheel.suspensionTravel)
+        ac.debug('test_ExtraSusTrav_RL',physics.getExtendedDamperTravel(0,2))
+      end)
     end
   )
   rrcam = obs.register(
@@ -219,6 +251,16 @@ obs.notify( function()
           float4 ret = tx1.Sample(samLinear,pin.Tex);
         return float4(ret.rgb,1);
       }]]})
+      canvas:update(function()
+        if math.abs(wheel.suspensionTravel) > maxtravelR then maxtravelR = math.abs(wheel.suspensionTravel) end
+        ui.drawLine(vec2(ui.availableSpaceX()-50,0),vec2(ui.availableSpaceX()-50,ui.availableSpaceY()),rgbm(0,0,0,1),7)
+        ui.drawLine(vec2(ui.availableSpaceX()-100,ui.availableSpaceY()/2),vec2(ui.availableSpaceX(),ui.availableSpaceY()/2),rgbm(0,0,0,1),7)
+
+        ui.drawCircleFilled(vec2(ui.availableSpaceX()-50,math.remap(wheel.suspensionTravel,maxtravelR*1.2,0,ui.availableSpaceY(),0) ),20,rgbm(1,1,1,1))
+        ui.drawCircleFilled(vec2(ui.availableSpaceX()-50,math.remap(wheel.suspensionTravel,maxtravelR*1.2,0,0,ui.availableSpaceY()) ),20,rgbm(1,1,1,1))
+        ac.debug('test_susTrav_RR',wheel.suspensionTravel)
+        ac.debug('test_ExtraSusTrav_RR',physics.getExtendedDamperTravel(0,3))
+      end)
     end
   )
 end)
@@ -254,7 +296,6 @@ function script.windowMain()
       if changed then cameraParameters.dashy = value end
       local value,changed = ui.slider('##dashz', cameraParameters.dashz, -5, 5, 'Z: %.05f')
       if changed then cameraParameters.dashz = value end
-      
       local value,changed = ui.slider('##dashpitch', cameraParameters.dashpitch, -90, 90, 'PITCH: %.03f')
       if changed then cameraParameters.dashpitch = value end
       local value,changed = ui.slider('##dashroll', cameraParameters.dashroll, -90, 90, 'ROLL: %.03f')
@@ -281,8 +322,6 @@ function script.windowMain()
   end) 
 end
 
--- local updatelate
-local deltaTime = 0
 function script.simUpdate(dt)
   sim = ac.getSim()
   car = ac.getCar(sim.focusedCar)
@@ -290,14 +329,11 @@ function script.simUpdate(dt)
   if ccam and cameraParameters.ccamactive then
     smoothing.setDT(dt)
     chaseCamera(dt)
-    --ccam:update()
   end
-
   if dcam and  cameraParameters.dashcamactive then
     dashcamparam()
     dcam:update()
   end
-
   if flcam or frcam or rlcam or rrcam then 
     flcam:update()
     frcam:update()
