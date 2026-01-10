@@ -26,47 +26,31 @@ local cameraParameters = ac.storage{
   , dashz = 0
   , dashroll =0
   , dashyaw =0
+  , camberx = 0.1
+  , cambery = -0.1
+  , camberz = -0.4
+  , camberfov = 60
 }
 
 local node = ac.findNodes('sceneRoot:yes')
-
---local sshot
---local scam = obs.register(
---  'kiyo-eng_OBSTexture'
---  ,'SpectatorView'
---  ,obs.Flags.UserSize
---  ,function(size)
---    if sshot then sshot:dispose() end
---    sshot = ac.GeometryShot(node, size,  1, true, render.AntialiasingMode.YEBIS, render.TextureFormat.R16G16B16A16.Float)
---    sshot:setClippingPlanes(0.01, 5e3)
---    sshot:setBestSceneShotQuality()
---  end ,function (canvas)
---    sshot:updateWithTrackCamera(0)
---    canvas:updateWithShader({
---      textures = { tx1 = sshot},
---      shader = [[
---      float4 main(PS_IN pin){
---        float4 ret = tx1.Sample(samLinear,pin.Tex);
---      return float4(ret.rgb,1);
---    }]]
---    })
---  end
---)
 
 local cshot
 local pos
 local dir
 local up 
 local fov
+local sizestore =nil
 local ccam = obs.register(
   'kiyo-eng_OBSTexture'
   ,'ChaserCamera' 
   ,obs.Flags.UserSize
   ,function (size)
-    if cshot then cshot:dispose() end
-    cshot = ac.GeometryShot(node, size, 1, true, render.AntialiasingMode.YEBIS, render.TextureFormat.R16G16B16A16.Float)
-    cshot:setClippingPlanes(0.01, 5e3)
-    cshot:setBestSceneShotQuality()
+    if sizestore ==nil or sizestore ~= size then 
+      if cshot then cshot:dispose() end
+      cshot = ac.GeometryShot(node, size, 1, false, render.AntialiasingMode.YEBIS, render.TextureFormat.R11G11B10.Float)
+      cshot:setClippingPlanes(0.01, 5e3)
+      cshot:setBestSceneShotQuality()
+    end
   end, function (canvas)
     cshot:update(pos,dir,up,fov)
     canvas:updateWithShader({
@@ -133,6 +117,119 @@ local dcam = obs.register(
     })
   end
 )
+
+local shootFL
+local shootFR
+local shootRL
+local shootRR
+
+local wheelPos
+-- local carPos
+local flcam
+local frcam
+local rlcam
+local rrcam
+
+local node = ac.findNodes('sceneRoot:yes')
+
+obs.notify( function()
+  flcam = obs.register(
+    'kiyo-eng_OBSTexture'
+    ,'CAM-FL' 
+    ,obs.Flags.UserSize+obs.Flags.ManualUpdate
+    ,function (size)
+      if shootFL then shootFL:dispose() end
+      shootFL = ac.GeometryShot(node, size, 1, false, render.AntialiasingMode.YEBIS, render.TextureFormat.R11G11B10.Float)
+      shootFL:setBestSceneShotQuality()
+    end, function (canvas)
+      local wheel = ac.getCar(0).wheels[0]
+      wheelPos = wheel.transform
+      -- carPos = ac.getCar(0).transform
+      local camPos = wheelPos:transformPoint(vec3(cameraParameters.camberx,cameraParameters.cambery,cameraParameters.camberz))
+      shootFL:update(camPos,wheelPos.look,wheel.contactNormal,cameraParameters.camberfov)
+      canvas:updateWithShader({
+        textures = { tx1 = shootFL},
+        shader = [[
+        float4 main(PS_IN pin){
+          float4 ret = tx1.Sample(samLinear,pin.Tex);
+        return float4(ret.rgb,1);
+      }]]
+      })
+    end
+  )
+  frcam = obs.register(
+    'kiyo-eng_OBSTexture'
+    ,'CAM-FR' 
+    ,obs.Flags.UserSize+obs.Flags.ManualUpdate
+    ,function (size)
+      if shootFR then shootFR:dispose() end
+      shootFR = ac.GeometryShot(node, size, 1, false, render.AntialiasingMode.YEBIS, render.TextureFormat.R11G11B10.Float)
+      shootFR:setBestSceneShotQuality()
+    end, function (canvas)
+      local wheel = ac.getCar(0).wheels[1]
+      wheelPos = wheel.transform
+      -- carPos = ac.getCar(0).transform
+      local camPos = wheelPos:transformPoint(vec3(-cameraParameters.camberx,cameraParameters.cambery,cameraParameters.camberz))
+      shootFR:update(camPos,wheelPos.look,wheel.contactNormal,cameraParameters.camberfov)
+      canvas:updateWithShader({
+        textures = { tx1 = shootFR},
+        shader = [[
+        float4 main(PS_IN pin){
+          float4 ret = tx1.Sample(samLinear,pin.Tex);
+        return float4(ret.rgb,1);
+      }]]
+      })
+    end
+  )
+  rlcam = obs.register(
+    'kiyo-eng_OBSTexture'
+    ,'CAM-RL' 
+    ,obs.Flags.UserSize+obs.Flags.ManualUpdate
+    ,function (size)
+      if shootRL then shootRL:dispose() end
+      shootRL = ac.GeometryShot(node, size, 1, false, render.AntialiasingMode.YEBIS, render.TextureFormat.R11G11B10.Float)
+      shootRL:setBestSceneShotQuality()
+    end, function (canvas)
+      local wheel = ac.getCar(0).wheels[2]
+      wheelPos = wheel.transform
+      -- carPos = ac.getCar(0).transform
+      local camPos = wheelPos:transformPoint(vec3(cameraParameters.camberx,cameraParameters.cambery,cameraParameters.camberz))
+      shootRL:update(camPos,wheelPos.look,wheel.contactNormal,cameraParameters.camberfov)
+      canvas:updateWithShader({
+        textures = { tx1 = shootRL},
+        shader = [[
+        float4 main(PS_IN pin){
+          float4 ret = tx1.Sample(samLinear,pin.Tex);
+        return float4(ret.rgb,1);
+      }]]
+      })
+    end
+  )
+  rrcam = obs.register(
+    'kiyo-eng_OBSTexture'
+    ,'CAM-RR' 
+    ,obs.Flags.UserSize+obs.Flags.ManualUpdate
+    ,function (size)
+      if shootRR then shootRR:dispose() end
+      shootRR = ac.GeometryShot(node, size, 1, false, render.AntialiasingMode.YEBIS, render.TextureFormat.R11G11B10.Float)
+      shootRR:setBestSceneShotQuality()
+    end, function (canvas)
+      local wheel = ac.getCar(0).wheels[3]
+      wheelPos = wheel.transform
+      -- carPos = ac.getCar(0).transform
+      local camPos = wheelPos:transformPoint(vec3(-cameraParameters.camberx,cameraParameters.cambery,cameraParameters.camberz))
+      shootRR:update(camPos,wheelPos.look,wheel.contactNormal,cameraParameters.camberfov)
+      canvas:updateWithShader({
+        textures = { tx1 = shootRR},
+        shader = [[
+        float4 main(PS_IN pin){
+          float4 ret = tx1.Sample(samLinear,pin.Tex);
+        return float4(ret.rgb,1);
+      }]]
+      })
+    end
+  )
+end)
 
 local carVelocity = smoothing(vec3(), 40)
 local lastCarPos = vec3()
@@ -234,7 +331,21 @@ function script.windowMain()
     if changed then cameraParameters.dashyaw = value end
     local value,changed = ui.slider('##dashfov', cameraParameters.fov, 10, 100, 'FOV: %.02f')
     if changed then cameraParameters.dashfov = value end
+    
+    ui.text('Camber Camera Setting')
+    local value,changed = ui.slider('##offsetx', cameraParameters.camberx, -3, 3, 'X: %.03f')
+    if changed then cameraParameters.camberx = value end
+    local value,changed = ui.slider('##offsety', cameraParameters.cambery, -3, 3 , 'Y: %.03f')
+    if changed then cameraParameters.cambery = value end
+    local value,changed = ui.slider('##offsetz', cameraParameters.camberz, -3, 3, 'Z: %.03f')
+    if changed then cameraParameters.camberz = value end
+    local value,changed = ui.slider('##camberfov', cameraParameters.camberfov, 10, 100, 'FOV: %.02f')
+    if changed then cameraParameters.camberfov = value end
+  
+  
   end
+
+
 end
 
 -- local updatelate
@@ -304,4 +415,8 @@ function script.simUpdate(dt)
     --ac.debug('angle' , vec3(carangle.x/math.pi,carangle.y/math.pi,carangle.z/math.pi))
     deltaTime = 0
   --end 
+  flcam:update()
+  frcam:update()
+  rlcam:update()
+  rrcam:update()
 end
