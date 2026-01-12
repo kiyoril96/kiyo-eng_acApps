@@ -80,7 +80,7 @@ local color_circle_alt = rgbm(0,0,0,0.1)
 local color_fliction = rgbm(0,1,1,1)
 local color_slip = rgbm(1,0.5,0,1)
 local color_gauge = rgbm(1,1,1,1)
-local color_gauge_alt = rgbm(0,0,0,0.5)
+local color_gauge_alt = rgbm(1,0,1,1)
 local segment = 40
 local thick = 0
 local angle = 0
@@ -133,10 +133,15 @@ function script.setui(car,wheel,offsetx,offsety,tyreLabel)
   -- トー角に合わせてUIを動かすか
   if settings.relativeTyer then angle = -(wheel.toeIn) else angle = 0 end 
   ui.beginRotation()
+
+  ui.beginRotation()
+    ui.drawLine(offset-vec2(gauge2GSize,0),offset+vec2(gauge2GSize,0),rgbm(1,1,0,1),thick*0.7)
+  ui.endPivotRotation(wheel.slipAngle+90, offset)
+
   --最大摩擦力（摩擦円）
   if settings.guage then
-    ui.drawLine(offset-vec2(radius_x,0),offset+vec2(radius_x,0),color_gauge_alt,thick*0.5)
-    ui.drawLine(offset-vec2(0,radius_y),offset+vec2(0,radius_y),color_gauge_alt,thick*0.5)
+    ui.drawLine(offset-vec2(gaugeSize,0),offset+vec2(gaugeSize,0),color_gauge_alt,thick*0.5)
+    ui.drawLine(offset-vec2(0,gaugeSize),offset+vec2(0,gaugeSize),color_gauge_alt,thick*0.5)
   end
   script.drawEllipse(offset,vec2(radius_x,radius_y),color_circle_alt,segment,thick*2)
   script.drawEllipse(offset,vec2(radius_x,radius_y),color_circle,segment,thick)
@@ -175,19 +180,23 @@ function script.setui(car,wheel,offsetx,offsety,tyreLabel)
       ui.drawCircleFilled( vec2((offset.x+(rotatedFoce.z+fliction_x)),(offset.y+(-rotatedFoce.x+fliction_y))),thick+2,color_gauge,segment)
     end
   end
+
   ui.endPivotRotation(angle, offset)
-  -- local tyerIndex
-  -- if tyreLabel == 'FL' then tyerIndex=0
-  -- elseif tyreLabel == 'FR' then tyerIndex=1
-  -- elseif tyreLabel == 'RL' then tyerIndex=2
-  -- elseif tyreLabel == 'RR' then tyerIndex=3
-  -- end
+  
+  local tyerIndex
+  if tyreLabel == 'FL' then tyerIndex=0
+  elseif tyreLabel == 'FR' then tyerIndex=1
+  elseif tyreLabel == 'RL' then tyerIndex=2
+  elseif tyreLabel == 'RR' then tyerIndex=3
+  end
   -- ac.debug(tyerIndex..'.'..tyreLabel..'_dx',DX)
   -- ac.debug(tyerIndex..'.'..tyreLabel..'_dy',DY)
   -- ac.debug(tyerIndex..'.'..tyreLabel..'_fx',FX)
   -- ac.debug(tyerIndex..'.'..tyreLabel..'_fy',FY)
   -- ac.debug(tyerIndex..'.'..tyreLabel..'_calc_dx',test_calc_dx)
   -- ac.debug(tyerIndex..'.'..tyreLabel..'_calc_dy',test_calc_dy)
+  ac.debug(tyerIndex..'.'..tyreLabel..'_SA',wheel.slipAngle)
+  
 end
 
 -- FL
