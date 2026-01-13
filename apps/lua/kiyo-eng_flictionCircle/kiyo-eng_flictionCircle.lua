@@ -130,13 +130,15 @@ function script.setui(car,wheel,offsetx,offsety,tyreLabel)
     ui.drawCircle(offset,gaugeSize,color_gauge,segment,thick*0.3)
     ui.drawCircle(offset,gauge2GSize,color_gauge,segment,thick*0.3)
   end
+  
   -- トー角に合わせてUIを動かすか
   if settings.relativeTyer then angle = -(wheel.toeIn) else angle = 0 end 
   ui.beginRotation()
 
+
   ui.beginRotation()
-    ui.drawLine(offset-vec2(gauge2GSize,0),offset+vec2(gauge2GSize,0),rgbm(1,1,0,1),thick*0.7)
-  ui.endPivotRotation(wheel.slipAngle+90, offset)
+    ui.drawLine(offset-vec2(0,gauge2GSize),offset+vec2(0,gauge2GSize),rgbm(1,1,0,1),thick*0.7)
+  ui.endPivotRotation((-wheel.slipAngle), offset)
 
   --最大摩擦力（摩擦円）
   if settings.guage then
@@ -196,6 +198,7 @@ function script.setui(car,wheel,offsetx,offsety,tyreLabel)
   -- ac.debug(tyerIndex..'.'..tyreLabel..'_calc_dx',test_calc_dx)
   -- ac.debug(tyerIndex..'.'..tyreLabel..'_calc_dy',test_calc_dy)
   ac.debug(tyerIndex..'.'..tyreLabel..'_SA',wheel.slipAngle)
+  ac.debug(tyerIndex..'.'..tyreLabel..'_Toe',wheel.toeIn)
   
 end
 
