@@ -44,11 +44,11 @@ function script.init()
     , function (canvas,size)
       local offset = vec2(settings.offsetX*resolution_retio.x,settings.offsetY*resolution_retio.y)
       canvas:clear()
-      canvas:update(function() 
-        script.setui(car,t0,(size.x/4)*1+offset.x,(size.y/4)*1+offset.y,'FL')
-        script.setui(car,t1,(size.x/4)*3-offset.x,(size.y/4)*1+offset.y,'FR')
-        script.setui(car,t2,(size.x/4)*1+offset.x,(size.y/4)*3-offset.y,'RL')
-        script.setui(car,t3,(size.x/4)*3-offset.x,(size.y/4)*3-offset.y,'RR')
+      canvas:update(function(dt) 
+        script.setui(car,t0,(size.x/4)*1+offset.x,(size.y/4)*1+offset.y,'FL',dt)
+        script.setui(car,t1,(size.x/4)*3-offset.x,(size.y/4)*1+offset.y,'FR',dt)
+        script.setui(car,t2,(size.x/4)*1+offset.x,(size.y/4)*3-offset.y,'RL',dt)
+        script.setui(car,t3,(size.x/4)*3-offset.x,(size.y/4)*3-offset.y,'RR',dt)
       end)
   end)
   end
@@ -84,7 +84,18 @@ local color_gauge_alt = rgbm(1,0,1,1)
 local segment = 40
 local thick = 0
 local angle = 0
-function script.setui(car,wheel,offsetx,offsety,tyreLabel)
+local lastVel = {}
+lastVel[0] = vec3()
+lastVel[1] = vec3()
+lastVel[2] = vec3()
+lastVel[3] = vec3()
+function script.setui(car,wheel,offsetx,offsety,tyreLabel,dt)
+  local tyerIndex
+  if tyreLabel == 'FL' then tyerIndex=0
+  elseif tyreLabel == 'FR' then tyerIndex=1
+  elseif tyreLabel == 'RL' then tyerIndex=2
+  elseif tyreLabel == 'RR' then tyerIndex=3
+  end
   local offset = vec2(offsetx,offsety)
   local scaleRetio = settings.scale * 0.01
   local load = wheel.load
@@ -97,6 +108,15 @@ function script.setui(car,wheel,offsetx,offsety,tyreLabel)
   if tyreLabel == 'FL'or tyreLabel == 'FR' then setctionName = 'FRONT' else setctionName = 'REAR' end
   local dxRef = tyresConfig:get(setctionName,'DX_REF',1)*wheel.surfaceGrip
   local dyRef = tyresConfig:get(setctionName,'DY_REF',1)*wheel.surfaceGrip
+  local acc = vec3()
+  local foce = vec3()
+  local velocity = vec3():set(wheel.velocity)
+  
+  if lastVel[tyerIndex] ~= vec3() then
+    acc = (velocity - lastVel[tyerIndex]) / dt
+    foce = (load/9.8)*acc
+  end
+  lastVel[tyerIndex] = velocity
 
   if ac.isInReplayMode() then 
     local load_remap = math.remap(load,0,mass_1g,-1,0)
@@ -111,6 +131,7 @@ function script.setui(car,wheel,offsetx,offsety,tyreLabel)
     end
     FX = 0
     FY = 0
+
   end
 
   -- DXが縦 DYが横
@@ -167,7 +188,8 @@ function script.setui(car,wheel,offsetx,offsety,tyreLabel)
   ui.drawLine(offset,vec2((offset.x+(fliction_x*ndslip)),(offset.y+(fliction_y*ndslip))),color_slip,thick*2)
   ui.drawCircleFilled( vec2((offset.x+(fliction_x*ndslip)),offset.y+(fliction_y*ndslip)),thick+2,color_slip,segment)
   if not ac.isInReplayMode() then 
-    local gforce = vec3():set(car.acceleration*(load),car.acceleration*(load),car.acceleration*(load))*scaleRetio
+    --local gforce = vec3():set(car.acceleration*(load),car.acceleration*(load),car.acceleration*(load))*scaleRetio
+    local gforce = foce/100
     local rotatedFoce = gforce:rotate(quat.fromAngleAxis(-math.rad(wheel.toeIn), vec3(0,1,0)))
     if settings.gforce then 
       -- 車体の加速度
@@ -185,12 +207,6 @@ function script.setui(car,wheel,offsetx,offsety,tyreLabel)
 
   ui.endPivotRotation(angle, offset)
   
-  local tyerIndex
-  if tyreLabel == 'FL' then tyerIndex=0
-  elseif tyreLabel == 'FR' then tyerIndex=1
-  elseif tyreLabel == 'RL' then tyerIndex=2
-  elseif tyreLabel == 'RR' then tyerIndex=3
-  end
   -- ac.debug(tyerIndex..'.'..tyreLabel..'_dx',DX)
   -- ac.debug(tyerIndex..'.'..tyreLabel..'_dy',DY)
   -- ac.debug(tyerIndex..'.'..tyreLabel..'_fx',FX)
@@ -199,17 +215,19 @@ function script.setui(car,wheel,offsetx,offsety,tyreLabel)
   -- ac.debug(tyerIndex..'.'..tyreLabel..'_calc_dy',test_calc_dy)
   ac.debug(tyerIndex..'.'..tyreLabel..'_SA',wheel.slipAngle)
   ac.debug(tyerIndex..'.'..tyreLabel..'_Toe',wheel.toeIn)
+  ac.debug(tyerIndex..'.'..tyreLabel..'_accel',acc)
+  ac.debug(tyerIndex..'.'..tyreLabel..'_foce',foce)
   
 end
 
 -- FL
-function script.ty0() script.setui(car,t0,ui.availableSpaceX()/2,ui.availableSpaceY()/2,'FL') end
+function script.ty0(dt) script.setui(car,t0,ui.availableSpaceX()/2,ui.availableSpaceY()/2,'FL',dt) end
 -- FR
-function script.ty1() script.setui(car,t1,ui.availableSpaceX()/2,ui.availableSpaceY()/2,'FR') end
+function script.ty1(dt) script.setui(car,t1,ui.availableSpaceX()/2,ui.availableSpaceY()/2,'FR',dt) end
 -- RL
-function script.ty2() script.setui(car,t2,ui.availableSpaceX()/2,ui.availableSpaceY()/2,'RL') end
+function script.ty2(dt) script.setui(car,t2,ui.availableSpaceX()/2,ui.availableSpaceY()/2,'RL',dt) end
 -- RR
-function script.ty3() script.setui(car,t3,ui.availableSpaceX()/2,ui.availableSpaceY()/2,'RR') end
+function script.ty3(dt) script.setui(car,t3,ui.availableSpaceX()/2,ui.availableSpaceY()/2,'RR',dt) end
 
 function script.windowMain()
   if ui.checkbox('Active',settings.isactive) then settings.isactive = not settings.isactive end
@@ -228,15 +246,16 @@ function script.windowMain()
   if changed then settings.thick = value end
 end
 
-function script.simUpdate()
+function script.simUpdate(dt)
   if isinit == false then script.init() end
   script.getState()
   if settings.isactive then
     ui.transparentWindow('Fliction_circle', vec2(0.0), uisize, function ()
-      script.setui(car,t0,uix*1+settings.offsetX,uiy*1+settings.offsetY,'FL')
-      script.setui(car,t1,uix*3-settings.offsetX,uiy*1+settings.offsetY,'FR')
-      script.setui(car,t2,uix*1+settings.offsetX,uiy*3-settings.offsetY,'RL')
-      script.setui(car,t3,uix*3-settings.offsetX,uiy*3-settings.offsetY,'RR')
+      script.setui(car,t0,uix*1+settings.offsetX,uiy*1+settings.offsetY,'FL',dt)
+      script.setui(car,t1,uix*3-settings.offsetX,uiy*1+settings.offsetY,'FR',dt)
+      script.setui(car,t2,uix*1+settings.offsetX,uiy*3-settings.offsetY,'RL',dt)
+      script.setui(car,t3,uix*3-settings.offsetX,uiy*3-settings.offsetY,'RR',dt)
     end)
   end
+  ac.debug('0_lastvel' ,lastVel[1])
 end

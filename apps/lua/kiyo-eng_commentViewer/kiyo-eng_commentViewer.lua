@@ -9,7 +9,6 @@ local viwdata = {}
 local url = 'ws://127.0.0.1:11180/sub?p=comments'
 local info_url = 'http://127.0.0.1:11180/api/info'
 local params = { function (err) alive = false end, function(reason) alive = false end , 'lson', true }
-local data = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHhtbG5zOnhsaW5rPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5L3hsaW5rIiB3aWR0aD0iNjRweCIgaGVpZ2h0PSI2NHB4Ij48cmVjdCB4PSIwIiB5PSIwIiB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIHJ4PSIwIiBzdHlsZT0iZmlsbDojNTVjMjQyIi8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGR5PSIuMWVtIiBmaWxsPSIjMDAwIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkb21pbmFudC1iYXNlbGluZT0ibWlkZGxlIiBzdHlsZT0iZm9udC1mYW1pbHk6IEFyaWFsLCBzYW5zLXNlcmlmOyBmb250LXNpemU6IDI0cHg7IGZvbnQtd2VpZ2h0OiBib2xkOyBsaW5lLWhlaWdodDogMSI+44OG44K5PC90ZXh0Pjwvc3ZnPg=='
 local error
 local status
 
@@ -105,10 +104,10 @@ function update(dt)
     
     setInterval(info, 10 ,10000)
 
-    ac.debug('data',viwdata)
-    ac.debug('alive',alive)
-    ac.debug('jsondata',jsondata)
-    ac.debug('meta',meta)
-    ac.debug('err',error)
-    ac.debug('res',status)
+    -- ac.debug('data',viwdata)
+    -- ac.debug('alive',alive)
+    -- ac.debug('jsondata',jsondata)
+    -- ac.debug('meta',meta)
+    -- ac.debug('err',error)
+    -- ac.debug('res',status)
 end
