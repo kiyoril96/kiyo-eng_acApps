@@ -152,13 +152,13 @@ function script.setui(car,wheel,offsetx,offsety,tyreLabel,dt)
     ui.drawCircle(offset,gauge2GSize,color_gauge,segment,thick*0.3)
   end
 
-  ui.beginRotation()
-    ui.drawLine(offset-vec2(0,gauge2GSize),offset+vec2(0,gauge2GSize),rgbm(1,1,0,1),thick*0.7)
-  ui.endPivotRotation((wheel.slipAngle)+90, offset)
-
   -- トー角に合わせてUIを動かすか
   if settings.relativeTyer then angle = -(wheel.toeIn) else angle = 0 end 
   ui.beginRotation()
+
+  ui.beginRotation()
+    ui.drawLine(offset-vec2(0,gauge2GSize),offset+vec2(0,gauge2GSize),rgbm(1,1,0,1),thick*0.7)
+  ui.endPivotRotation((-wheel.slipAngle), offset)
 
   --最大摩擦力（摩擦円）
   if settings.guage then
