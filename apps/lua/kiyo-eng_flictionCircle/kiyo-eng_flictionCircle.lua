@@ -108,15 +108,15 @@ function script.setui(car,wheel,offsetx,offsety,tyreLabel,dt)
   if tyreLabel == 'FL'or tyreLabel == 'FR' then setctionName = 'FRONT' else setctionName = 'REAR' end
   local dxRef = tyresConfig:get(setctionName,'DX_REF',1)*wheel.surfaceGrip
   local dyRef = tyresConfig:get(setctionName,'DY_REF',1)*wheel.surfaceGrip
-  local acc = vec3()
-  local foce = vec3()
-  local velocity = vec3():set(wheel.velocity)
-  
-  if lastVel[tyerIndex] ~= vec3() then
-    acc = (velocity - lastVel[tyerIndex]) / dt
-    foce = (load/9.8)*acc
-  end
-  lastVel[tyerIndex] = velocity
+  --local acc = vec3()
+  --local foce = vec3()
+  --local velocity = (wheel.transform):inverse():transformVector(wheel.velocity)
+
+  --if lastVel[tyerIndex] ~= vec3() then
+  --  acc = (velocity - lastVel[tyerIndex]) / dt
+  --  foce = (load/9.8)*acc
+  --end
+  --lastVel[tyerIndex] = velocity
 
   if ac.isInReplayMode() then 
     local load_remap = math.remap(load,0,mass_1g,-1,0)
@@ -151,15 +151,14 @@ function script.setui(car,wheel,offsetx,offsety,tyreLabel,dt)
     ui.drawCircle(offset,gaugeSize,color_gauge,segment,thick*0.3)
     ui.drawCircle(offset,gauge2GSize,color_gauge,segment,thick*0.3)
   end
-  
-  -- トー角に合わせてUIを動かすか
-  if settings.relativeTyer then angle = -(wheel.toeIn) else angle = 0 end 
-  ui.beginRotation()
-
 
   ui.beginRotation()
     ui.drawLine(offset-vec2(0,gauge2GSize),offset+vec2(0,gauge2GSize),rgbm(1,1,0,1),thick*0.7)
-  ui.endPivotRotation((-wheel.slipAngle), offset)
+  ui.endPivotRotation((wheel.slipAngle)+90, offset)
+
+  -- トー角に合わせてUIを動かすか
+  if settings.relativeTyer then angle = -(wheel.toeIn) else angle = 0 end 
+  ui.beginRotation()
 
   --最大摩擦力（摩擦円）
   if settings.guage then
@@ -188,8 +187,8 @@ function script.setui(car,wheel,offsetx,offsety,tyreLabel,dt)
   ui.drawLine(offset,vec2((offset.x+(fliction_x*ndslip)),(offset.y+(fliction_y*ndslip))),color_slip,thick*2)
   ui.drawCircleFilled( vec2((offset.x+(fliction_x*ndslip)),offset.y+(fliction_y*ndslip)),thick+2,color_slip,segment)
   if not ac.isInReplayMode() then 
-    --local gforce = vec3():set(car.acceleration*(load),car.acceleration*(load),car.acceleration*(load))*scaleRetio
-    local gforce = foce/100
+    local gforce = vec3():set((car.acceleration)*(load))*scaleRetio
+    --local gforce = -foce/100
     local rotatedFoce = gforce:rotate(quat.fromAngleAxis(-math.rad(wheel.toeIn), vec3(0,1,0)))
     if settings.gforce then 
       -- 車体の加速度
