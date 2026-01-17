@@ -13,6 +13,7 @@ local tyresConfig
 local settings = ac.storage {
   isactive = true,
   gforce = false,
+  slipAngle = false,
   composite = false,
   relativeTyer = false,
   guage = false,
@@ -37,7 +38,7 @@ function script.init()
   -- obs init 
   local resolution_retio
   obs.notify(function ()
-    obs.register('kiyo-eng_OBSTexture', 'FlictionCircle', obs.Flags.Transparent+obs.Flags.UserSize
+    obs.register('kiyo-eng_OBSTexture', 'FrictionCircle', obs.Flags.Transparent+obs.Flags.UserSize
     , function (size)
       resolution_retio = vec2(size.x/uisize.x,size.y/uisize.y)
     end
@@ -77,19 +78,14 @@ end
 
 local color_circle = rgbm() 
 local color_circle_alt = rgbm(0,0,0,0.1)
-local color_fliction = rgbm(0,1,1,1)
+local color_friction = rgbm(0,1,1,1)
 local color_slip = rgbm(1,0.5,0,1)
 local color_gauge = rgbm(1,1,1,1)
 local color_gauge_alt = rgbm(1,0,1,1)
 local segment = 40
 local thick = 0
 local angle = 0
-local lastVel = {}
-lastVel[0] = vec3()
-lastVel[1] = vec3()
-lastVel[2] = vec3()
-lastVel[3] = vec3()
-function script.setui(car,wheel,offsetx,offsety,tyreLabel,dt)
+function script.setui(car,wheel,offsetx,offsety,tyreLabel)
   local tyerIndex
   if tyreLabel == 'FL' then tyerIndex=0
   elseif tyreLabel == 'FR' then tyerIndex=1
@@ -108,15 +104,6 @@ function script.setui(car,wheel,offsetx,offsety,tyreLabel,dt)
   if tyreLabel == 'FL'or tyreLabel == 'FR' then setctionName = 'FRONT' else setctionName = 'REAR' end
   local dxRef = tyresConfig:get(setctionName,'DX_REF',1)*wheel.surfaceGrip
   local dyRef = tyresConfig:get(setctionName,'DY_REF',1)*wheel.surfaceGrip
-  --local acc = vec3()
-  --local foce = vec3()
-  --local velocity = (wheel.transform):inverse():transformVector(wheel.velocity)
-
-  --if lastVel[tyerIndex] ~= vec3() then
-  --  acc = (velocity - lastVel[tyerIndex]) / dt
-  --  foce = (load/9.8)*acc
-  --end
-  --lastVel[tyerIndex] = velocity
 
   if ac.isInReplayMode() then 
     local load_remap = math.remap(load,0,mass_1g,-1,0)
@@ -131,14 +118,13 @@ function script.setui(car,wheel,offsetx,offsety,tyreLabel,dt)
     end
     FX = 0
     FY = 0
-
   end
 
   -- DXが縦 DYが横
   local radius_x = script.scale(load*DX,scaleRetio)
   local radius_y = script.scale(load*DY,scaleRetio)
-  local fliction_x = script.scale(FX,scaleRetio)
-  local fliction_y = script.scale(FY,scaleRetio)
+  local friction_x = script.scale(FX,scaleRetio)
+  local friction_y = script.scale(FY,scaleRetio)
   local ndslip = wheel.ndSlip
   local gaugeSize = script.scale(mass_1g*dxRef,scaleRetio)
   local gauge2GSize = script.scale(mass_1g*2*dxRef,scaleRetio)
@@ -156,10 +142,6 @@ function script.setui(car,wheel,offsetx,offsety,tyreLabel,dt)
   if settings.relativeTyer then angle = -(wheel.toeIn) else angle = 0 end 
   ui.beginRotation()
 
-  ui.beginRotation()
-    ui.drawLine(offset-vec2(0,gauge2GSize),offset+vec2(0,gauge2GSize),rgbm(1,1,0,1),thick*0.7)
-  ui.endPivotRotation((-wheel.slipAngle), offset)
-
   --最大摩擦力（摩擦円）
   if settings.guage then
     ui.drawLine(offset-vec2(gaugeSize,0),offset+vec2(gaugeSize,0),color_gauge_alt,thick*0.5)
@@ -167,70 +149,60 @@ function script.setui(car,wheel,offsetx,offsety,tyreLabel,dt)
   end
   script.drawEllipse(offset,vec2(radius_x,radius_y),color_circle_alt,segment,thick*2)
   script.drawEllipse(offset,vec2(radius_x,radius_y),color_circle,segment,thick)
-  --test 
-  --local load_remap = math.remap(load,0,mass_1g,-1,0)
-  --local calc_dx = ((dxRef)^(dxRef-load_remap))
-  --local calc_dy = ((dyRef)^(dyRef-load_remap))
-  --local test_calc_dx = calc_dx
-  --local test_calc_dy = calc_dy
-  --if load > tyresConfig:get(setctionName,'FZ0',1)*9.8 then
-  --  test_calc_dx = calc_dx * (math.log(( load-(tyresConfig:get(setctionName,'FZ0',1.0)*9.8) ),tyresConfig:get(setctionName,'LS_EXPX',1)))
-  --  test_calc_dy = calc_dy * (math.log(( load-(tyresConfig:get(setctionName,'FZ0',1.0)*9.8) ),tyresConfig:get(setctionName,'LS_EXPY',1)))
-  --end
-  --script.drawEllipse(offset,vec2(script.scale(load*test_calc_dy,scaleRetio),script.scale(load*test_calc_dx,scaleRetio)),rgbm(1,1,0,1),segment,thick)
   --発生している摩擦力のベクトル
-  ui.drawCircleFilled(offset,thick,color_fliction,segment)
-  ui.drawLine(offset,vec2(offset.x+fliction_x,offset.y+fliction_y),color_fliction,thick*2)
-  ui.drawCircleFilled(vec2(offset.x+fliction_x,offset.y+fliction_y),thick+2,color_fliction,segment)
+  ui.drawCircleFilled(offset,thick,color_friction,segment)
+  ui.drawLine(offset,vec2(offset.x+friction_x,offset.y+friction_y),color_friction,thick*2)
+  ui.drawCircleFilled(vec2(offset.x+friction_x,offset.y+friction_y),thick+2,color_friction,segment)
   --スリップ率
   ui.drawCircleFilled(offset,thick,color_slip,segment)
-  ui.drawLine(offset,vec2((offset.x+(fliction_x*ndslip)),(offset.y+(fliction_y*ndslip))),color_slip,thick*2)
-  ui.drawCircleFilled( vec2((offset.x+(fliction_x*ndslip)),offset.y+(fliction_y*ndslip)),thick+2,color_slip,segment)
+  ui.drawLine(offset,vec2((offset.x+(friction_x*ndslip)),(offset.y+(friction_y*ndslip))),color_slip,thick*2)
+  ui.drawCircleFilled( vec2((offset.x+(friction_x*ndslip)),offset.y+(friction_y*ndslip)),thick+2,color_slip,segment)
   if not ac.isInReplayMode() then 
     local gforce = vec3():set((car.acceleration)*(load))*scaleRetio
-    --local gforce = -foce/100
     local rotatedFoce = gforce:rotate(quat.fromAngleAxis(-math.rad(wheel.toeIn), vec3(0,1,0)))
-    if settings.gforce then 
+    if settings.gforce then
       -- 車体の加速度
       ui.drawCircleFilled(offset,thick,rgbm(0,0,1,1),segment)
       ui.drawLine(offset,vec2((offset.x+(rotatedFoce.z)),(offset.y+(-rotatedFoce.x))),rgbm(0,0,1,1),thick*1.5)
       ui.drawCircleFilled( vec2((offset.x+(rotatedFoce.z)),(offset.y+(-rotatedFoce.x))),thick+2,rgbm(0,0,1,1),segment)
     end
+
+    if settings.slipAngle then
+      -- スリップアングル
+      ui.beginRotation()
+        ui.drawLine(offset-vec2(0,gauge2GSize),offset+vec2(0,gauge2GSize),rgbm(1,1,0,1),thick*0.7)
+        ui.drawLine(offset-vec2(gauge2GSize,0),offset+vec2(gauge2GSize,0),rgbm(1,1,0,1),thick*0.7)
+      ui.endPivotRotation((-wheel.slipAngle), offset)
+    end
+
     if settings.composite then
       -- 合成
       ui.drawCircleFilled(offset,thick,color_gauge,segment)
-      ui.drawLine(offset,vec2((offset.x+(rotatedFoce.z+fliction_x)),(offset.y+(-rotatedFoce.x+fliction_y))),color_gauge,thick*1.5)
-      ui.drawCircleFilled( vec2((offset.x+(rotatedFoce.z+fliction_x)),(offset.y+(-rotatedFoce.x+fliction_y))),thick+2,color_gauge,segment)
+      ui.drawLine(offset,vec2((offset.x+(rotatedFoce.z+friction_x)),(offset.y+(-rotatedFoce.x+friction_y))),color_gauge,thick*1.5)
+      ui.drawCircleFilled( vec2((offset.x+(rotatedFoce.z+friction_x)),(offset.y+(-rotatedFoce.x+friction_y))),thick+2,color_gauge,segment)
     end
   end
 
   ui.endPivotRotation(angle, offset)
   
-  -- ac.debug(tyerIndex..'.'..tyreLabel..'_dx',DX)
-  -- ac.debug(tyerIndex..'.'..tyreLabel..'_dy',DY)
-  -- ac.debug(tyerIndex..'.'..tyreLabel..'_fx',FX)
-  -- ac.debug(tyerIndex..'.'..tyreLabel..'_fy',FY)
-  -- ac.debug(tyerIndex..'.'..tyreLabel..'_calc_dx',test_calc_dx)
-  -- ac.debug(tyerIndex..'.'..tyreLabel..'_calc_dy',test_calc_dy)
   ac.debug(tyerIndex..'.'..tyreLabel..'_SA',wheel.slipAngle)
   ac.debug(tyerIndex..'.'..tyreLabel..'_Toe',wheel.toeIn)
-  ac.debug(tyerIndex..'.'..tyreLabel..'_accel',acc)
-  ac.debug(tyerIndex..'.'..tyreLabel..'_foce',foce)
-  
 end
 
+-- 単体ウィンドウ
 -- FL
-function script.ty0(dt) script.setui(car,t0,ui.availableSpaceX()/2,ui.availableSpaceY()/2,'FL',dt) end
+function script.ty0(dt) script.setui(car,t0,ui.availableSpaceX()/2,ui.availableSpaceY()/2,'FL') end
 -- FR
-function script.ty1(dt) script.setui(car,t1,ui.availableSpaceX()/2,ui.availableSpaceY()/2,'FR',dt) end
+function script.ty1(dt) script.setui(car,t1,ui.availableSpaceX()/2,ui.availableSpaceY()/2,'FR') end
 -- RL
-function script.ty2(dt) script.setui(car,t2,ui.availableSpaceX()/2,ui.availableSpaceY()/2,'RL',dt) end
+function script.ty2(dt) script.setui(car,t2,ui.availableSpaceX()/2,ui.availableSpaceY()/2,'RL') end
 -- RR
-function script.ty3(dt) script.setui(car,t3,ui.availableSpaceX()/2,ui.availableSpaceY()/2,'RR',dt) end
+function script.ty3(dt) script.setui(car,t3,ui.availableSpaceX()/2,ui.availableSpaceY()/2,'RR') end
 
 function script.windowMain()
   if ui.checkbox('Active',settings.isactive) then settings.isactive = not settings.isactive end
   if ui.checkbox('Gforce Vector',settings.gforce) then settings.gforce = not settings.gforce end
+  if ui.checkbox('SlipAngle Guage',settings.slipAngle) then settings.slipAngle = not settings.slipAngle end
   if ui.checkbox('Composite Vector',settings.composite) then settings.composite = not settings.composite end
   if ui.checkbox('RelativeTyer',settings.relativeTyer) then settings.relativeTyer = not settings.relativeTyer end
   if ui.checkbox('Guage',settings.guage) then settings.guage = not settings.guage end
@@ -249,12 +221,11 @@ function script.simUpdate(dt)
   if isinit == false then script.init() end
   script.getState()
   if settings.isactive then
-    ui.transparentWindow('Fliction_circle', vec2(0.0), uisize, function ()
-      script.setui(car,t0,uix*1+settings.offsetX,uiy*1+settings.offsetY,'FL',dt)
-      script.setui(car,t1,uix*3-settings.offsetX,uiy*1+settings.offsetY,'FR',dt)
-      script.setui(car,t2,uix*1+settings.offsetX,uiy*3-settings.offsetY,'RL',dt)
-      script.setui(car,t3,uix*3-settings.offsetX,uiy*3-settings.offsetY,'RR',dt)
+    ui.transparentWindow('##Friction_circle', vec2(0.0), uisize, function ()
+      script.setui(car,t0,uix*1+settings.offsetX,uiy*1+settings.offsetY,'FL')
+      script.setui(car,t1,uix*3-settings.offsetX,uiy*1+settings.offsetY,'FR')
+      script.setui(car,t2,uix*1+settings.offsetX,uiy*3-settings.offsetY,'RL')
+      script.setui(car,t3,uix*3-settings.offsetX,uiy*3-settings.offsetY,'RR')
     end)
   end
-  ac.debug('0_lastvel' ,lastVel[1])
 end
