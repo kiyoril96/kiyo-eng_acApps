@@ -1,3 +1,4 @@
+require('util')
 local obs = require('shared/utils/obs')
 local t0
 local t1
@@ -26,11 +27,6 @@ local settings = ac.storage {
   thick = 5
 }
 
--- radius vec2(縦,横)
-function script.drawEllipse(center, radius, color, numSegments, thickness)
-  ui.pathUnevenArcTo(center, radius, 0, math.pi * 2.1 , numSegments or 12)
-  ui.pathStroke(color, true, thickness or 1)
-end
 
 function script.init()
   uisize = ac.getUI().windowSize
@@ -141,7 +137,7 @@ function script.setui(car,wheel,offsetx,offsety,tyreLabel)
   thick = settings.thick
   color_circle = rgbm(wheel.ndSlip,math.clamp(2-wheel.ndSlip,0,1),0.5,1)
   local colerVal = math.abs(wheel.slipAngle)-limit_angle
-  local coler_sa = rgbm((colerVal^2),((-math.clamp(colerVal,0,1)^2)+1),0,0.3)
+  local coler_sa = rgbm((colerVal^2),((-math.clamp(colerVal,0,1)^2)+1),0,0.5)
   local coler_angle = rgbm(coler_sa.r,coler_sa.g,coler_sa.b,1)
   -- 枠
   if settings.guage then 
@@ -270,29 +266,24 @@ function script.windowMain()
   local windowSize = uisize
   -- UIのX幅設定（これまでのOFFSETX）
   ui.setNextItemWidth((ui.availableSpaceX()/2)-15 )
-  local value,changed = ui.slider('##offsetx', settings.offsetX, -(windowSize.x/4), windowSize.x/4, 'X: %.0f')
+  local value,changed = ui.resetableSlider('##offsetx', settings.offsetX, -(windowSize.x/4), windowSize.x/4, 'X: %.0f',nil,0)
   if changed then settings.offsetX = value end
-  --これで右クリックリセット
-  if ui.itemClicked(ui.MouseButton.Right, true) then  settings.offsetX = 0 end 
   ui.sameLine()
   ui.offsetCursorX(15)
   -- UI全体を水平方向に動かす メインの表示にのみ適用（単体ウィンドウとOBSには反映されない）
   ui.setNextItemWidth(ui.availableSpaceX())
-  local value,changed = ui.slider('##centerx', settings.centerX, -(windowSize.x/2), windowSize.x/2, 'X: %.0f')
+  local value,changed = ui.resetableSlider('##centerx', settings.centerX, -(windowSize.x/2), windowSize.x/2, 'X: %.0f',nil,0)
   if changed then settings.centerX = value end
-  if ui.itemClicked(ui.MouseButton.Right, true) then  settings.centerX = 0 end 
   -- UIのY幅設定（これまでのOFFSETY）
   ui.setNextItemWidth((ui.availableSpaceX()/2)-15)
-  local value,changed = ui.slider('##offsety', settings.offsetY, -(windowSize.y/4), windowSize.y/4, 'Y: %.0f')
+  local value,changed = ui.resetableSlider('##offsety', settings.offsetY, -(windowSize.y/4), windowSize.y/4, 'Y: %.0f',nil,0)
   if changed then settings.offsetY = value end
-  if ui.itemClicked(ui.MouseButton.Right, true) then  settings.offsetY = 0 end 
   ui.sameLine()
   ui.offsetCursorX(15)
   -- UI全体を垂直方向に動かす メインの表示にのみ適用（単体ウィンドウとOBSには反映されない）
   ui.setNextItemWidth(ui.availableSpaceX())
-  local value,changed = ui.slider('##centery', settings.centerY, -(windowSize.y/2), windowSize.y/2, 'Y: %.0f')
+  local value,changed = ui.resetableSlider('##centery', settings.centerY, -(windowSize.y/2), windowSize.y/2, 'Y: %.0f',nil,0)
   if changed then settings.centerY = value end
-  if ui.itemClicked(ui.MouseButton.Right, true) then  settings.centerY = 0 end 
   ui.unindent(10)
   -- サイズ
   ui.offsetCursorY(10)
@@ -300,16 +291,14 @@ function script.windowMain()
   ui.indent(10)
   ui.offsetCursorY(5)
   ui.setNextItemWidth((ui.availableSpaceX()/2)-15)
-  local value,changed = ui.slider('##scale', settings.scale,0, 5, 'Scale: %.02f')
+  local value,changed = ui.resetableSlider('##scale', settings.scale,0, 5, 'Scale: %.02f',nil,0)
   if changed then settings.scale = value end
-  if ui.itemClicked(ui.MouseButton.Right, true) then  settings.scale = 2 end 
   ui.sameLine()
   -- 太さ
   ui.offsetCursorX(15)
   ui.setNextItemWidth(ui.availableSpaceX())
-  local value,changed = ui.slider('##thick', settings.thick, 1, 20, 'Thickness: %.02f')
+  local value,changed = ui.resetableSlider('##thick', settings.thick, 1, 20, 'Thickness: %.02f',nil,0)
   if changed then settings.thick = value end
-  if ui.itemClicked(ui.MouseButton.Right, true) then  settings.thick = 5 end 
 
   ui.unindent(10)
 
