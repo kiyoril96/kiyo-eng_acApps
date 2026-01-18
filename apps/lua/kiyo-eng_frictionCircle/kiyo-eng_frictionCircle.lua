@@ -16,9 +16,9 @@ local settings = ac.storage {
   gforce = false,
   slipAngle = false,
   composite = false,
-  relativeTyer = false,
-  guage = true,
-  guageMax = 2,
+  relativeTyre = false,
+  gauge = true,
+  gaugeMax = 2,
   offsetX =0,
   offsetY =0,
   centerX =0,
@@ -87,11 +87,11 @@ local segment = 50
 local thick = 0
 local angle = 0
 function script.setui(car,wheel,offsetx,offsety,tyreLabel)
-  -- local tyerIndex
-  -- if tyreLabel == 'FL' then tyerIndex=0
-  -- elseif tyreLabel == 'FR' then tyerIndex=1
-  -- elseif tyreLabel == 'RL' then tyerIndex=2
-  -- elseif tyreLabel == 'RR' then tyerIndex=3
+  -- local TyreIndex
+  -- if tyreLabel == 'FL' then TyreIndex=0
+  -- elseif tyreLabel == 'FR' then TyreIndex=1
+  -- elseif tyreLabel == 'RL' then TyreIndex=2
+  -- elseif tyreLabel == 'RR' then TyreIndex=3
   -- end
   local offset = vec2(offsetx,offsety)
   local scaleRetio = settings.scale * 0.01
@@ -129,8 +129,8 @@ function script.setui(car,wheel,offsetx,offsety,tyreLabel)
   local ndslip = wheel.ndSlip
   local gaugeSize = script.scale(mass_1g*dxRef,scaleRetio)
   local gaugeMaxSize
-  if settings.guage then
-    gaugeMaxSize = gaugeSize*settings.guageMax
+  if settings.gauge then
+    gaugeMaxSize = gaugeSize*settings.gaugeMax
   else
     gaugeMaxSize = radius_x
   end
@@ -140,14 +140,14 @@ function script.setui(car,wheel,offsetx,offsety,tyreLabel)
   local coler_sa = rgbm((colerVal^2),((-math.clamp(colerVal,0,1)^2)+1),0,0.5)
   local coler_angle = rgbm(coler_sa.r,coler_sa.g,coler_sa.b,1)
   -- 枠
-  if settings.guage then 
+  if settings.gauge then 
     ui.drawCircle(offset,gaugeSize,color_gauge,segment,thick*0.3)
-    if settings.guageMax == 2 then 
+    if settings.gaugeMax == 2 then 
       ui.drawCircle(offset,gaugeSize*2,color_gauge,segment,thick*0.3)
-    elseif settings.guageMax == 3 then
+    elseif settings.gaugeMax == 3 then
       ui.drawCircle(offset,gaugeSize*2,color_gauge,segment,thick*0.3)
       ui.drawCircle(offset,gaugeSize*3,color_gauge,segment,thick*0.3)
-    elseif settings.guageMax == 4 then
+    elseif settings.gaugeMax == 4 then
       ui.drawCircle(offset,gaugeSize*2,color_gauge,segment,thick*0.3)
       ui.drawCircle(offset,gaugeSize*3,color_gauge,segment,thick*0.3)
       ui.drawCircle(offset,gaugeSize*4,color_gauge,segment,thick*0.3)
@@ -159,7 +159,7 @@ function script.setui(car,wheel,offsetx,offsety,tyreLabel)
   end
 
   -- トー角(ステアリングによる角度を含む)に合わせてUIを動かすか
-  if settings.relativeTyer then angle = -(wheel.toeIn) else angle = 0 end 
+  if settings.relativeTyre then angle = -(wheel.toeIn) else angle = 0 end 
   ui.beginRotation()
   -- スリップアングル(エリア表示)
   if not ac.isInReplayMode() and settings.slipAngle then
@@ -169,7 +169,7 @@ function script.setui(car,wheel,offsetx,offsety,tyreLabel)
   end
 
   -- タイヤの向きの表示
-  if settings.relativeTyer and settings.guage then
+  if settings.relativeTyre and settings.gauge then
     ui.drawLine(offset-vec2(gaugeSize,0),offset+vec2(gaugeSize,0),color_gauge_alt,thick*0.3)
     ui.drawLine(offset-vec2(0,gaugeSize),offset+vec2(0,gaugeSize),color_gauge_alt,thick*0.3)
   end
@@ -229,18 +229,18 @@ function script.windowMain()
   
   -- ゲージの表示選択
   ui.offsetCursorY(10)
-  ui.text('Guage:')
+  ui.text('Gauge:')
   ui.indent(10)
   ui.offsetCursorY(5)
-  if ui.checkbox('Show guage',settings.guage) then settings.guage = not settings.guage end
+  if ui.checkbox('Show gauge',settings.gauge) then settings.gauge = not settings.gauge end
   ui.sameLine()
   ui.offsetCursorX(ui.availableSpaceX()/5)
   ui.text('Max')
   ui.sameLine()
   ui.setNextItemWidth(75)
-  ui.combo('##guageMax',settings.guageMax..'G',function()
+  ui.combo('##gaugeMax',settings.gaugeMax..'G',function()
     for i=1 , 4 do 
-      if ui.selectable(i..'G') then settings.guageMax = i end
+      if ui.selectable(i..'G') then settings.gaugeMax = i end
     end end)
   ui.unindent(10)
 
@@ -249,10 +249,10 @@ function script.windowMain()
   ui.text('Reference Direction:')
   ui.indent(10)
   ui.offsetCursorY(5)
-  if ui.radioButton('Wheel', settings.relativeTyer) then settings.relativeTyer = true end
+  if ui.radioButton('Wheel', settings.relativeTyre) then settings.relativeTyre = true end
   ui.sameLine()
   ui.offsetCursorX(ui.availableSpaceX()/3)
-  if ui.radioButton('Car', not settings.relativeTyer) then settings.relativeTyer = false end
+  if ui.radioButton('Car', not settings.relativeTyre) then settings.relativeTyre = false end
   ui.unindent(10)
 
   -- 各オフセット 都合上軸方向順に並んでる
