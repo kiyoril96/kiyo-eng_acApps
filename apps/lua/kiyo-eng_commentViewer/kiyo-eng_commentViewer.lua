@@ -1,3 +1,4 @@
+require('util')
 local webBrowser = require('shared/web/browser')
 local browser = webBrowser()
 local templateList
@@ -58,6 +59,7 @@ function windowSettings()
                     settings.selectedName = templateList[i]['dir']..'/'..templateList[i]['name']
                     browser:navigate(settings.selectedTemplate)
                 end
+                if ui.itemHovered() then ui.tooltip(nil,function() ui.image(templateList[i]['thumb'],vec2(200,200),ui.ImageFit.Fit) end) end
             end
         end)
     end
@@ -65,7 +67,7 @@ function windowSettings()
     ui.offsetCursorY(20)
     ui.text('Size')
     ui.offsetCursorY(5)
-    local value,changed = ui.slider('##zoom', settings.zoom*100 , 0, 200, '%.0f %%')
+    local value,changed = ui.resetableSlider('##zoom', settings.zoom*100 , 0, 200, '%.0f %%',nil,100)
     if changed then 
         settings.zoom = value/100
         browser:setZoomScale(settings.zoom)   
@@ -78,11 +80,8 @@ function windowSettings()
     ui.dwriteDrawText('配信者のためのコメントアプリ「わんコメ」',14,ui.getCursor())
 
     ui.offsetCursorY(20)
-    if ui.textHyperlink('https://onecomme.com') then 
-        os.openURL("https://onecomme.com")
-    end
+    ui.clickableHyperLink('https://onecomme.com')
     ui.offsetCursorY(20)
-
 end
 
 local interval = 3

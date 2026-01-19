@@ -1,8 +1,3 @@
--- radius vec2(縦,横)
-function script.drawEllipse(center, radius, color, numSegments, thickness)
-  ui.pathUnevenArcTo(center, radius, 0, math.pi * 2.1 , numSegments or 12)
-  ui.pathStroke(color, true, thickness or 1)
-end
 
 -- 右クリックでリセットできるスライダー
 function ui.resetableSlider(label,value,min,max,format,power,defaultValue)
