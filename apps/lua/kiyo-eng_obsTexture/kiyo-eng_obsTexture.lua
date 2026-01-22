@@ -1,6 +1,5 @@
 -- Access OBS helper library:
 local obs = require('shared/utils/obs')
-local sim
 local car 
 local cameraParameters = ac.storage{
   ccamactive = true
@@ -39,28 +38,33 @@ local carVelocity = smoothing(vec3(), 40)
 local lastCarPos = vec3()
 local lookDirection = smoothing(0, 10)
 function chaseCamera(dt)
-  cfov = cameraParameters.fov
-  local carTf = car.transform
-  local carPos = vec3((car.wheels[0].position + car.wheels[1].position+car.wheels[2].position + car.wheels[3].position)/4)
-  if lastCarPos ~= carPos then
+  local carTf = mat4x4.look(
+    (car.wheels[0].contactPoint + car.wheels[1].contactPoint+car.wheels[2].contactPoint + car.wheels[3].contactPoint)/4
+    ,car.look,car.up):inverse()
+
+  if lastCarPos ~= carTf.position then
     if lastCarPos ~= vec3() then
-      local delta = lastCarPos - carPos      
-      if #delta > 5 then delta = delta / #delta * 5 end
+      local delta = lastCarPos - carTf.position
+      local deltaLength = #delta
+      if deltaLength > 5 then delta = delta / deltaLength * 5 end
       carVelocity:update(-delta / dt)
     end
     lastCarPos = carTf.position
   end
-  local carVelocityDir = math.normalize(carVelocity.val + carTf.look)
-  local velocityX = math.clamp((math.dot(carTf.side, carVelocityDir) * ((#carVelocity.val)^cameraParameters.ccamSensiVel)) /5, -1, 1)
-  local cameraAngle = velocityX * math.radians(cameraParameters.ccammaxangle)
+
+  local carVelocityDir = math.normalize(carVelocity.val + carTf.look * 0.01)
+  local velocityX = math.clamp(math.dot(carTf.side, carVelocityDir) * math.pow(#carVelocity.val, cameraParameters.ccamSensiVel) / 10, -1, 1)
+  local cameraAngle = -velocityX * math.radians(cameraParameters.ccammaxangle)
   cameraAngle = cameraAngle + lookDirection.val * math.pi
   local sinAngle = math.sin(cameraAngle)
   local cosAngle = math.cos(cameraAngle)
-  cpos = carTf:transformPoint(vec3(sinAngle*cameraParameters.distance,cameraParameters.height,-cosAngle*cameraParameters.distance))
+  cpos = carTf:transformPoint(vec3(sinAngle,0,cosAngle)*cameraParameters.distance) + vec3(0,cameraParameters.height,0)
   local cameraLookPosOffset = carTf.look + carTf.up * (1-math.abs(lookDirection.val))
-  local cameraLook = (carTf.position + cameraLookPosOffset - cpos ):normalize()
-  cdir = cameraLook:rotate(quat.fromAngleAxis(math.radians(-cameraParameters.pitch), carTf.side))
-  cup = (carTf.up + vec3(0,2,0)):normalize()
+  cdir = (carTf.position + cameraLookPosOffset - cpos ):normalize()
+  cdir:rotate(quat.fromAngleAxis(math.radians(cameraParameters.pitch), carTf.side))
+  cup = (carTf.up + vec3(0,3,0)):normalize()
+  cfov =  cameraParameters.fov
+
 end
 
 local cshot
@@ -271,6 +275,7 @@ function script.windowMain()
       ui.text('Chaser Camera Setting')
       if ui.checkbox('Activate',cameraParameters.ccamactive) then
         cameraParameters.ccamactive = not cameraParameters.ccamactive
+        --if not cameraParameters.ccamactive and ccam then ccam:dispose() end
       end
       local value,changed = ui.slider('##distance', cameraParameters.distance, 3, 10, 'DISTANCE: %.05f')
       if changed then cameraParameters.distance = value end
@@ -289,6 +294,7 @@ function script.windowMain()
       ui.text('Dash Camera Setting')
       if ui.checkbox('Activate',cameraParameters.dashcamactive) then
         cameraParameters.dashcamactive = not cameraParameters.dashcamactive
+        --if not cameraParameters.dashcamactive and dcam then dcam:dispose() end
       end
       local value,changed = ui.slider('##dashx', cameraParameters.dashx, -5, 5, 'X: %.05f')
       if changed then cameraParameters.dashx = value end
@@ -309,6 +315,12 @@ function script.windowMain()
       ui.text('Camber Camera Setting')
       if ui.checkbox('Activate',cameraParameters.cambercamactive) then
         cameraParameters.cambercamactive = not cameraParameters.cambercamactive
+        --if not cameraParameters.cambercamactive and 
+        --flcam or frcam or rlcam or rrcam then 
+        --  flcam:dispose() 
+        --  frcam:dispose() 
+        --  rlcam:dispose() 
+        --  rrcam:dispose() end
       end
       local value,changed = ui.slider('##offsetx', cameraParameters.camberx, -3, 3, 'X: %.05f')
       if changed then cameraParameters.camberx = value end
@@ -323,8 +335,7 @@ function script.windowMain()
 end
 
 function script.simUpdate(dt)
-  sim = ac.getSim()
-  car = ac.getCar(sim.focusedCar)
+  car = ac.getCar(ac.getSim().focusedCar)
   ac.forceVisibleHeadNodes(0, true) 
   if ccam and cameraParameters.ccamactive then
     smoothing.setDT(dt)
