@@ -95,5 +95,4 @@ function update()
     end
     ac.debug('alive',alive)
     ac.debug('init',init)
-    ac.debug('interval',interval)
 end
