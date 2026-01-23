@@ -259,7 +259,7 @@ function redirectSelecter()
                         table.insert(layer_in.apps, windowlist[i].name)
                         -- ここでリダイレクトの処理
                         local accesser = ac.accessAppWindow(windowlist[i].name)
-                        accesser:setRedirectLayer(y,windowlist[i].layerDuplicate)
+                        if accesser then accesser:setRedirectLayer(y,windowlist[i].layerDuplicate) end
                         --layer_in.pos = accesser:position():min(layer_in.pos)
                         --layer_in.size = (accesser:position()+accesser:size()):max(layer_in.pos)
                         layerList[y] = layer_in
@@ -359,7 +359,7 @@ function windowListReflesh()
     for i=1 ,#windowlist do
         if windowlist[i].layer >= 1 then
             local accesser = ac.accessAppWindow(windowlist[i].name)
-            accesser:setRedirectLayer(0)
+            if accesser then accesser:setRedirectLayer(0) end
         end
     end 
     layerList = {}
@@ -455,7 +455,7 @@ function loadSettings(name)
         local accesser = ac.accessAppWindow(appData[1])
         local dup = false
         if tonumber(appData[3]) == 1 then dup = true end
-        accesser:setRedirectLayer(tonumber(appData[2]),dup)
+        if accesser then accesser:setRedirectLayer(tonumber(appData[2]),dup) end
     end
     local setval = nil
     for index,key in configNames:iterateValues('CONFIGS','config',true) do
@@ -500,20 +500,22 @@ function uiupdate()
                 canvas = layerList[i].appCanvas
             end
 
-            canvas:clear()
-            canvas:updateWithShader({
-                    --p1 = vec2(0,0),
-                    p2 = windowSize,
-                    uv1 = minPos/windowSize,
-                    --uv2 = uv2,
-                    textures = {tx1 = 'dynamic::hud::redirected::'..i},
-                    shader = [[
-                        float4 main(PS_IN pin){
-                            float4 ret = tx1.Sample(samLinear,pin.Tex);
-                            return float4(ret.rgba);
-                        }]]
-            })
-            layerList[i].appCanvas = canvas
+            if canvas then 
+                canvas:clear()
+                canvas:updateWithShader({
+                        --p1 = vec2(0,0),
+                        p2 = windowSize,
+                        uv1 = minPos/windowSize,
+                        --uv2 = uv2,
+                        textures = {tx1 = 'dynamic::hud::redirected::'..i},
+                        shader = [[
+                            float4 main(PS_IN pin){
+                                float4 ret = tx1.Sample(samLinear,pin.Tex);
+                                return float4(ret.rgba);
+                            }]]
+                })
+                layerList[i].appCanvas = canvas
+            end
         else 
             -- TODO これがあるとなぜかやり直したときに真っ白になる 要調査
             if layerList[i] ~= nil and layerList[i].appCanvas then layerList[i].appCanvas:dispose() end 
