@@ -37,7 +37,7 @@ function script.init()
   -- obs init 
   local resolution_retio
   obs.notify(function ()
-    obs.register('kiyo-eng_OBSTexture', 'FrictionCircle', obs.Flags.Transparent+obs.Flags.UserSize
+    obs.register('kiyo-eng', 'FrictionCircle', obs.Flags.Transparent+obs.Flags.UserSize
     , function (size)
       resolution_retio = vec2(size.x/uisize.x,size.y/uisize.y)
     end

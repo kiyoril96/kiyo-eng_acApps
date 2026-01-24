@@ -71,7 +71,7 @@ local cshot
 local ccam
 obs.notify( function()
   ccam = obs.register(
-    'kiyo-eng_OBSTexture'
+    'kiyo-eng'
     ,'ChaserCamera' 
     ,obs.Flags.UserSize --+obs.Flags.ManualUpdate
     ,function (size)
@@ -108,7 +108,7 @@ local dashcam
 local dcam
 obs.notify( function()
   dcam = obs.register(
-    'kiyo-eng_OBSTexture'
+    'kiyo-eng'
     ,'DashbordCamera' 
     ,obs.Flags.UserSize+obs.Flags.ManualUpdate
     ,function (size)
@@ -140,7 +140,7 @@ local maxtravelF = 0
 local maxtravelR = 0
 obs.notify( function()
   flcam = obs.register(
-    'kiyo-eng_OBSTexture'
+    'kiyo-eng'
     ,'CAM-FL' 
     ,obs.Flags.UserSize+obs.Flags.ManualUpdate
     ,function (size)
@@ -172,7 +172,7 @@ obs.notify( function()
     end
   )
   frcam = obs.register(
-    'kiyo-eng_OBSTexture'
+    'kiyo-eng'
     ,'CAM-FR' 
     ,obs.Flags.UserSize+obs.Flags.ManualUpdate
     ,function (size)
@@ -204,7 +204,7 @@ obs.notify( function()
     end
   )
   rlcam = obs.register(
-    'kiyo-eng_OBSTexture'
+    'kiyo-eng'
     ,'CAM-RL' 
     ,obs.Flags.UserSize+obs.Flags.ManualUpdate
     ,function (size)
@@ -236,7 +236,7 @@ obs.notify( function()
     end
   )
   rrcam = obs.register(
-    'kiyo-eng_OBSTexture'
+    'kiyo-eng'
     ,'CAM-RR' 
     ,obs.Flags.UserSize+obs.Flags.ManualUpdate
     ,function (size)
@@ -270,7 +270,7 @@ obs.notify( function()
 end)
 
 function script.windowMain()
-  ui.tabBar('#kiyoeng_OBSTextures',ui.TabBarFlags.None ,function()
+  ui.tabBar('#kiyoengs',ui.TabBarFlags.None ,function()
     ui.tabItem('Chaser',function()
       ui.text('Chaser Camera Setting')
       if ui.checkbox('Activate',cameraParameters.ccamactive) then
