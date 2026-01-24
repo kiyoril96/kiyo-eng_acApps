@@ -29,6 +29,7 @@ local cameraParameters = ac.storage{
 }
 
 local node = ac.findNodes('sceneRoot:yes')
+local cams = {}
 
 local cpos
 local cdir
@@ -37,7 +38,12 @@ local cfov
 local carVelocity = smoothing(vec3(), 40)
 local lastCarPos = vec3()
 local lookDirection = smoothing(0, 10)
-function chaseCamera(dt)
+local lastTime = 0
+function chaseCamera()
+  local sim = ac.getSim()
+  local curTime = sim.time
+  local deltaTime = (curTime - lastTime)/1000
+  smoothing.setDT(deltaTime)
   local carTf = mat4x4.look(
     (car.wheels[0].contactPoint + car.wheels[1].contactPoint+car.wheels[2].contactPoint + car.wheels[3].contactPoint)/4
     ,car.look,car.up):inverse()
@@ -47,7 +53,7 @@ function chaseCamera(dt)
       local delta = lastCarPos - carTf.position
       local deltaLength = #delta
       if deltaLength > 5 then delta = delta / deltaLength * 5 end
-      carVelocity:update(-delta / dt)
+      carVelocity:update(-delta / deltaTime)
     end
     lastCarPos = carTf.position
   end
@@ -64,21 +70,21 @@ function chaseCamera(dt)
   cdir:rotate(quat.fromAngleAxis(math.radians(cameraParameters.pitch), carTf.side))
   cup = (carTf.up + vec3(0,3,0)):normalize()
   cfov =  cameraParameters.fov
-
+  lastTime = curTime
 end
 
 local cshot
-local ccam
 obs.notify( function()
-  ccam = obs.register(
+  cams[1] = obs.register(
     'kiyo-eng'
     ,'ChaserCamera' 
-    ,obs.Flags.UserSize --+obs.Flags.ManualUpdate
+    ,obs.Flags.UserSize +obs.Flags.ManualUpdate
     ,function (size)
       if cshot then cshot:dispose() end
       cshot = ac.GeometryShot(node, size, 1, false, render.AntialiasingMode.YEBIS, render.TextureFormat.R11G11B10.Float)
       cshot:setBestSceneShotQuality()
-    end, function (canvas)
+    end, function (canvas,dt)
+      chaseCamera()
       cshot:update(cpos,cdir,cup,cfov)
       canvas:updateWithShader({
         textures = { tx1 = cshot},
@@ -105,9 +111,8 @@ function dashcamparam()
 end
 
 local dashcam
-local dcam
 obs.notify( function()
-  dcam = obs.register(
+  cams[2] = obs.register(
     'kiyo-eng'
     ,'DashbordCamera' 
     ,obs.Flags.UserSize+obs.Flags.ManualUpdate
@@ -117,6 +122,7 @@ obs.notify( function()
       dashcam:setClippingPlanes(0.01, 5e3)
       dashcam:setBestSceneShotQuality()
       end, function (canvas)
+      dashcamparam()
       dashcam:update(dpos,ddir,dup,dfov)
       canvas:updateWithShader({
         textures = { tx1 = dashcam},
@@ -132,14 +138,10 @@ local shootFL
 local shootFR
 local shootRL
 local shootRR
-local flcam
-local frcam
-local rlcam
-local rrcam
 local maxtravelF = 0
 local maxtravelR = 0
 obs.notify( function()
-  flcam = obs.register(
+  cams[3] = obs.register(
     'kiyo-eng'
     ,'CAM-FL' 
     ,obs.Flags.UserSize+obs.Flags.ManualUpdate
@@ -171,7 +173,7 @@ obs.notify( function()
       end)
     end
   )
-  frcam = obs.register(
+  cams[4] = obs.register(
     'kiyo-eng'
     ,'CAM-FR' 
     ,obs.Flags.UserSize+obs.Flags.ManualUpdate
@@ -203,7 +205,7 @@ obs.notify( function()
       end)
     end
   )
-  rlcam = obs.register(
+  cams[5] = obs.register(
     'kiyo-eng'
     ,'CAM-RL' 
     ,obs.Flags.UserSize+obs.Flags.ManualUpdate
@@ -235,7 +237,7 @@ obs.notify( function()
       end)
     end
   )
-  rrcam = obs.register(
+  cams[6] = obs.register(
     'kiyo-eng'
     ,'CAM-RR' 
     ,obs.Flags.UserSize+obs.Flags.ManualUpdate
@@ -331,24 +333,43 @@ function script.windowMain()
       local value,changed = ui.slider('##camberfov', cameraParameters.camberfov, 10, 100, 'FOV: %.03f')
       if changed then cameraParameters.camberfov = value end
     end)
+        
+    ui.tabItem('General',function() 
+      ui.text('TatgetFPS')
+
+      local value,changed = ui.slider('##fps', cameraParameters.fps, 1, 60, 'FPS: %.0f')
+      if changed then cameraParameters.fps = value end
+      
+    end)
   end) 
 end
 
+--local time = 0
 function script.simUpdate(dt)
   car = ac.getCar(ac.getSim().focusedCar)
-  ac.forceVisibleHeadNodes(0, true) 
-  if ccam and cameraParameters.ccamactive then
-    smoothing.setDT(dt)
-    chaseCamera(dt)
+  ac.forceVisibleHeadNodes(0, true)
+  
+  local slot = math.ceil(ac.getSim().fps/cameraParameters.fps)
+
+  for i=1 , #cams do
+    if ac.getSim().frame%slot == i%slot then 
+      cams[i]:update()
+    end
   end
-  if dcam and  cameraParameters.dashcamactive then
-    dashcamparam()
-    dcam:update()
-  end
-  if flcam or frcam or rlcam or rrcam then 
-    flcam:update()
-    frcam:update()
-    rlcam:update()
-    rrcam:update()
-  end
+
+  --time = time + dt
+  --if time > (1/cameraParameters.fps) then
+  --  if cams[1] and cameraParameters.ccamactive then
+  --    cams[1]:update()
+  --  end
+  --  if cams[2] and  cameraParameters.dashcamactive then
+  --    cams[2]:update()
+  --  end
+  --  if cams[3] or cams[4] or cams[5] or cams[6] then 
+  --    cams[3]:update()
+  --    cams[4]:update()
+  --    cams[5]:update()
+  --    cams[6]:update()
+  --  end
+  --end
 end
